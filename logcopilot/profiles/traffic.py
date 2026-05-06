@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Traffic profile: endpoint summaries, latency reports and anomaly detection."""
+"""Профиль трафика: сводки эндпоинтов, отчеты по задержкам и поиск аномалий."""
 
 from collections import Counter, defaultdict
 from statistics import mean, quantiles
@@ -10,9 +10,17 @@ from ..domain import Event
 
 
 def _collect_client_ip_activity(events: List[Event]) -> tuple[defaultdict[str, set[str]], Counter[str]]:
-    """Collect request counts and unique-path counts for each client IP."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+    
+    Returns:
+        tuple[defaultdict[str, set[str]], Counter[str]]: Карта путей по клиентским IP и счетчик запросов по IP.
+    """
     path_by_ip = defaultdict(set)
     hits_by_ip: Counter[str] = Counter()
+    # Проходим события один раз и одновременно накапливаем агрегаты для отчета.
     for event in events:
         if not event.client_ip:
             continue
@@ -23,7 +31,14 @@ def _collect_client_ip_activity(events: List[Event]) -> tuple[defaultdict[str, s
 
 
 def _build_row_anomalies(rows: List[dict]) -> List[dict]:
-    """Build anomaly payloads that depend only on aggregated traffic rows."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: строки.
+    
+    Args:
+        rows (List[dict]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
+    
+    Returns:
+        List[dict]: Аномалии по агрегированным строкам трафика: ошибки, высокая задержка и повышенная нагрузка.
+    """
     anomalies = []
     for row in rows:
         status = row["http_status"]
@@ -54,7 +69,15 @@ def _build_scan_like_anomalies(
     path_by_ip: defaultdict[str, set[str]],
     hits_by_ip: Counter[str],
 ) -> List[dict]:
-    """Build anomaly payloads for scan-like client IP behavior."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки.
+    
+    Args:
+        path_by_ip (defaultdict[str, set[str]]): Значение `path_by_ip`, используемое функцией при выполнении операции.
+        hits_by_ip (Counter[str]): Значение `hits_by_ip`, используемое функцией при выполнении операции.
+    
+    Returns:
+        List[dict]: Подозрительные IP, похожие на сканирование, с количеством запросов и уникальных путей.
+    """
     anomalies = []
     for client_ip, unique_paths in path_by_ip.items():
         if len(unique_paths) >= 10 or hits_by_ip[client_ip] >= 20:
@@ -75,14 +98,14 @@ def _build_scan_like_anomalies(
 
 
 def percentile(values: List[float], rank: int) -> Optional[float]:
-    """Compute an inclusive percentile for a numeric sample.
-
+    """Выполняет вспомогательную операцию для логики проекта.
+    
     Args:
-        values: Numeric sample values.
-        rank: Percentile rank from 1 to 100.
-
+        values (List[float]): Набор входных значений, используемых при вычислении результата.
+        rank (int): Процентиль или ранг, который нужно вычислить по набору значений.
+    
     Returns:
-        Rounded percentile value, or `None` when samples are absent.
+        Optional[float]: Значение указанного перцентиля или None, если входной список пуст.
     """
     if not values:
         return None
@@ -92,15 +115,16 @@ def percentile(values: List[float], rank: int) -> Optional[float]:
 
 
 def build_traffic_rows(events: Iterable[Event]) -> List[dict]:
-    """Aggregate events into traffic summary rows by method, path and status.
-
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: трафика, строк.
+    
     Args:
-        events: Canonical events to aggregate.
-
+        events (Iterable[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+    
     Returns:
-        Sorted traffic summary rows.
+        List[dict]: Агрегированные строки трафика по методу, пути и статусу с частотой, ошибками и p95 задержки.
     """
     grouped = defaultdict(list)
+    # Проходим события один раз и одновременно накапливаем агрегаты для отчета.
     for event in events:
         key = (event.method or "UNKNOWN", event.path or "unknown", event.http_status)
         grouped[key].append(event)
@@ -127,14 +151,14 @@ def build_traffic_rows(events: Iterable[Event]) -> List[dict]:
 
 
 def build_traffic_anomalies(events: List[Event], rows: List[dict]) -> List[dict]:
-    """Detect suspicious traffic patterns from events and summary rows.
-
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: трафика.
+    
     Args:
-        events: Canonical events for anomaly detection.
-        rows: Aggregated traffic rows.
-
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        rows (List[dict]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
+    
     Returns:
-        Derived anomaly payloads.
+        List[dict]: Объединенный список аномалий трафика по строкам и подозрительной активности IP.
     """
     path_by_ip, hits_by_ip = _collect_client_ip_activity(events)
     anomalies = _build_row_anomalies(rows)
@@ -143,14 +167,14 @@ def build_traffic_anomalies(events: List[Event], rows: List[dict]) -> List[dict]
 
 
 def run_traffic_profile(events: List[Event], output_dir) -> dict:
-    """Compute the traffic profile result.
-
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: трафика, профиля.
+    
     Args:
-        events: Canonical events to analyze.
-        output_dir: Compatibility argument retained for existing callers.
-
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        output_dir (Any): Директория, в которой создаются артефакты текущего запуска.
+    
     Returns:
-        Profile payload with rows, anomalies and summary metadata.
+        dict: Полезная нагрузка профиля трафика: summary, строки latency/load, suspicious_patterns и analysis_summary.
     """
     del output_dir
     rows = build_traffic_rows(events)

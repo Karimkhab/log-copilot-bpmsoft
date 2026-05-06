@@ -8,6 +8,14 @@ from logcopilot.pipeline import run_pipeline
 
 class HeatmapIntegrationTests(unittest.TestCase):
     def test_heatmap_profile_on_fixture_log(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: тепловой карты, профиля, лога.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = """2026-03-11 08:20:00 INFO Gateway - GET /api/orders status=200 latency=120ms size=320 ip=10.0.0.1
 2026-03-11 08:20:20 INFO Gateway - GET /api/orders status=200 latency=210ms size=300 ip=10.0.0.2
 2026-03-11 08:21:00 INFO Billing - POST /api/payments status=200 latency=900ms size=512 ip=10.0.0.3

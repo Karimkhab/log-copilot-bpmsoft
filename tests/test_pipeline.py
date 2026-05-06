@@ -12,6 +12,14 @@ from logcopilot.pipeline import main as pipeline_main, run_pipeline
 
 class PipelineContractTests(unittest.TestCase):
     def test_pipeline_config_is_immutable_and_expands_input_path(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: конвейера, конфигурации, пути.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         config = PipelineConfig(input_path=Path("~/sample.log"), profile="traffic")
 
         self.assertEqual(Path("~/sample.log").expanduser(), config.input_path)
@@ -20,10 +28,26 @@ class PipelineContractTests(unittest.TestCase):
             config.profile = "heatmap"
 
     def test_pipeline_config_rejects_local_agent_provider(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: конвейера, конфигурации, агентского этапа.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         with self.assertRaises(ValueError):
             PipelineConfig(input_path=Path("~/sample.log"), profile="traffic", agent_provider="local")
 
     def test_profile_stage_result_exposes_legacy_payload_sections(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: профиля, полезной нагрузки.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         result = ProfileStageResult(
             profile="heatmap",
             payload={
@@ -42,6 +66,14 @@ class PipelineContractTests(unittest.TestCase):
 
 class PipelineTests(unittest.TestCase):
     def test_direct_public_run_pipeline_creates_run_outputs(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: конвейера.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = "2026-03-11 08:20:00 INFO Gateway - GET /api/orders status=200 latency=25ms size=32 ip=10.0.0.1\n"
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -72,6 +104,14 @@ class PipelineTests(unittest.TestCase):
             )
 
     def test_agent_enabled_pipeline_returns_product_output_without_agent_debug_artifacts(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: агентского этапа, конвейера, агентского этапа.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = "2026-03-11 08:20:00 INFO Gateway - GET /api/orders status=500 latency=1200ms size=32 ip=10.0.0.1\n"
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -106,6 +146,14 @@ class PipelineTests(unittest.TestCase):
             self.assertNotIn("execution_quality", summary)
 
     def test_critical_failure_after_run_start_marks_run_failed(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = "2026-03-11 08:20:00 INFO Gateway - GET /api/orders status=200 latency=25ms size=32 ip=10.0.0.1\n"
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -130,6 +178,14 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual("RuntimeError", failure_summary["error"]["type"])
 
     def test_single_file_input_generates_incident_run_outputs(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: файла, инцидента.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = """2026-03-11 08:20:49,617 [1] FATAL  Host Start - Startup exception|System.Security.SecurityException: System login error.
    at Foo.Bar()
 2026-03-11 08:21:15,037 [1] ERROR  Host Start - Hosting failed to start

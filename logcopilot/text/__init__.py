@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Text processing helpers: normalization and signature construction."""
+"""Вспомогательные средства обработки текста: нормализация и построение сигнатур."""
 
 from .normalization import NormalizationStats, count_mask_tokens, normalize_text
 from .signatures import (

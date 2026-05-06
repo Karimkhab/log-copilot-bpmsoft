@@ -21,14 +21,28 @@ logger = logging.getLogger(__name__)
 
 
 def discover_log_files(root: Path) -> list[Path]:
-    """Возвращает список .log файлов для обработки."""
+    """Находит подходящие файлы или ресурсы во входном пути. Область применения: лога, файлов.
+    
+    Args:
+        root (Path): Корневой путь входных данных, относительно которого вычисляются имена файлов.
+    
+    Returns:
+        list[Path]: Один входной файл или отсортированный список `.log` файлов, найденных внутри директории.
+    """
     if root.is_file():
         return [root]
     return sorted(path for path in root.rglob("*.log") if path.is_file())
 
 
 def build_default_registry() -> ParserRegistry:
-    """Регистрирует штатный набор парсеров в порядке приоритета."""
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки.
+    
+    Args:
+        Нет параметров.
+    
+    Returns:
+        ParserRegistry: Реестр стандартных парсеров в порядке приоритета, включая fallback-парсер.
+    """
     registry = ParserRegistry()
     registry.register(JsonParser())
     registry.register(LogfmtParser())
@@ -44,11 +58,14 @@ DEFAULT_REGISTRY = build_default_registry()
 
 
 def canonical_to_raw_event(event: CanonicalEvent, source_file: str) -> RawEvent:
-    """
-    Адаптер совместимости для legacy callers.
-
-    Новая основная ветка event building строит `Event` напрямую из `CanonicalEvent`,
-    но адаптер оставлен для тестов и обратной совместимости.
+    """Выполняет вспомогательную операцию для события.
+    
+    Args:
+        event (CanonicalEvent): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
+        source_file (str): Имя файла-источника, которое попадет в событие и отчетные артефакты.
+    
+    Returns:
+        RawEvent: Legacy-представление события с полями, перенесенными из CanonicalEvent.
     """
     return RawEvent(
         source_file=source_file,
@@ -75,16 +92,15 @@ def canonical_to_raw_event(event: CanonicalEvent, source_file: str) -> RawEvent:
 
 
 def parse_file(path: Path, root: Path, registry: ParserRegistry | None = None) -> ParseResult:
-    """
-    Парсит один лог-файл и возвращает события в едином формате.
-
-    Функция читает файл, выбирает подходящий парсер через registry,
-    запускает парсинг и гарантирует, что у каждого события заполнен source.
-
-    :param path: путь к конкретному лог-файлу
-    :param root: исходный путь запуска, файл или директория с логами
-    :param registry: реестр доступных парсеров, если нужен не стандартный
-    :return: результат парсинга с событиями, диагностикой и предупреждениями
+    """Разбирает входные данные и преобразует их в структурированный результат. Область применения: файла.
+    
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        root (Path): Корневой путь входных данных, относительно которого вычисляются имена файлов.
+        registry (ParserRegistry | None, optional): Реестр доступных парсеров, используемый для выбора подходящего обработчика.
+    
+    Returns:
+        ParseResult: События выбранного парсера, статистика качества, предупреждения и сведения о fallback-разборе файла.
     """
     registry = registry or DEFAULT_REGISTRY # используем стандартный реестр, если другой не передали
     text = path.read_text(encoding="utf-8", errors="replace") # читаем файл с заменой битых символов
@@ -119,12 +135,31 @@ def parse_file(path: Path, root: Path, registry: ParserRegistry | None = None) -
 
 
 def iter_canonical_events(root: Path, registry: ParserRegistry | None = None) -> Iterator[CanonicalEvent]:
+    """Итерирует по входным данным и последовательно отдает подготовленные элементы. Область применения: событий.
+    
+    Args:
+        root (Path): Корневой путь входных данных, относительно которого вычисляются имена файлов.
+        registry (ParserRegistry | None, optional): Реестр доступных парсеров, используемый для выбора подходящего обработчика.
+    
+    Returns:
+        Iterator[CanonicalEvent]: Ленивый поток канонических событий из всех найденных лог-файлов.
+    """
     for path in discover_log_files(root):
         result = parse_file(path, root, registry=registry)
         yield from result.events
 
 
 def iter_events_for_file(path: Path, root: Path, registry: ParserRegistry | None = None) -> Iterator[RawEvent]:
+    """Итерирует по входным данным и последовательно отдает подготовленные элементы. Область применения: событий, файла.
+    
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        root (Path): Корневой путь входных данных, относительно которого вычисляются имена файлов.
+        registry (ParserRegistry | None, optional): Реестр доступных парсеров, используемый для выбора подходящего обработчика.
+    
+    Returns:
+        Iterator[RawEvent]: Ленивый поток legacy RawEvent для одного файла с корректной меткой source_file.
+    """
     source_file = path.name if root.is_file() else str(path.relative_to(root))
     result = parse_file(path, root, registry=registry)
     for event in result.events:
@@ -132,5 +167,14 @@ def iter_events_for_file(path: Path, root: Path, registry: ParserRegistry | None
 
 
 def iter_events(root: Path, registry: ParserRegistry | None = None) -> Iterator[RawEvent]:
+    """Итерирует по входным данным и последовательно отдает подготовленные элементы. Область применения: событий.
+    
+    Args:
+        root (Path): Корневой путь входных данных, относительно которого вычисляются имена файлов.
+        registry (ParserRegistry | None, optional): Реестр доступных парсеров, используемый для выбора подходящего обработчика.
+    
+    Returns:
+        Iterator[RawEvent]: Ленивый поток legacy RawEvent из всех `.log` файлов входного пути.
+    """
     for path in discover_log_files(root):
         yield from iter_events_for_file(path, root, registry=registry)

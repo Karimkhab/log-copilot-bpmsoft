@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Signature-based clustering helpers for incident-oriented event analysis."""
+"""Вспомогательные функции кластеризации по сигнатурам для анализа инцидентов."""
 
 from collections import Counter, defaultdict
 from datetime import datetime
@@ -12,13 +12,13 @@ from .quality import confidence_label
 
 
 def choose_first_non_null(values: Iterable[Optional[str]]) -> Optional[str]:
-    """Return the first truthy string from an iterable.
-
+    """Выбирает подходящее значение из набора кандидатов.
+    
     Args:
-        values: Candidate string values.
-
+        values (Iterable[Optional[str]]): Набор входных значений, используемых при вычислении результата.
+    
     Returns:
-        First non-empty value, or `None` if none exists.
+        Optional[str]: Первое непустое строковое значение из последовательности; None, если подходящих значений нет.
     """
     for value in values:
         if value:
@@ -27,31 +27,32 @@ def choose_first_non_null(values: Iterable[Optional[str]]) -> Optional[str]:
 
 
 def top_source_files(events: List[Event], limit: int = 5) -> str:
-    """Summarize the most common source files for a cluster.
-
+    """Возвращает наиболее значимые элементы по частоте, весу или другому критерию. Область применения: файлов.
+    
     Args:
-        events: Events that belong to one signature cluster.
-        limit: Maximum number of source files to include.
-
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+    
     Returns:
-        Human-readable source file summary string.
+        str: Строка со списком самых частых файлов-источников и количеством событий по каждому файлу.
     """
     counts = Counter(event.source_file for event in events)
     return "; ".join(f"{source} ({hits})" for source, hits in counts.most_common(limit))
 
 
 def sample_messages(events: List[Event], limit: int = 5) -> str:
-    """Collect distinct sample messages from cluster events.
-
+    """Выполняет вспомогательную операцию для сообщений.
+    
     Args:
-        events: Events that belong to one signature cluster.
-        limit: Maximum number of distinct messages to include.
-
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+    
     Returns:
-        Concatenated sample message string.
+        str: Несколько уникальных примеров сообщений, объединенных разделителем ` || ` для компактного отчета.
     """
     samples: List[str] = []
     seen = set()
+    # Проходим события один раз и одновременно накапливаем агрегаты для отчета.
     for event in events:
         message = event.message.strip()
         if not message or message in seen:
@@ -64,54 +65,55 @@ def sample_messages(events: List[Event], limit: int = 5) -> str:
 
 
 def levels_summary(events: List[Event]) -> str:
-    """Summarize event levels found inside a cluster.
-
+    """Выполняет вспомогательную операцию для сводки.
+    
     Args:
-        events: Events that belong to one signature cluster.
-
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+    
     Returns:
-        Human-readable level histogram string.
+        str: Сводка уровней логирования в формате `LEVEL:count`, отсортированная по частоте.
     """
     counts = Counter((event.level or "UNKNOWN").upper() for event in events)
     return ", ".join(f"{level}:{hits}" for level, hits in counts.most_common())
 
 
 def min_timestamp(events: List[Event]) -> Optional[datetime]:
-    """Return the earliest timestamp present in a list of events.
-
+    """Выполняет вспомогательную операцию для временной метки.
+    
     Args:
-        events: Events to inspect.
-
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+    
     Returns:
-        Earliest timestamp, or `None` when timestamps are absent.
+        Optional[datetime]: Самая ранняя временная метка среди событий; None, если у событий нет времени.
     """
     values = [event.timestamp for event in events if event.timestamp]
     return min(values) if values else None
 
 
 def max_timestamp(events: List[Event]) -> Optional[datetime]:
-    """Return the latest timestamp present in a list of events.
-
+    """Выполняет вспомогательную операцию для временной метки.
+    
     Args:
-        events: Events to inspect.
-
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+    
     Returns:
-        Latest timestamp, or `None` when timestamps are absent.
+        Optional[datetime]: Самая поздняя временная метка среди событий; None, если у событий нет времени.
     """
     values = [event.timestamp for event in events if event.timestamp]
     return max(values) if values else None
 
 
 def build_cluster_summaries(events: List[Event]) -> List[ClusterSummary]:
-    """Build signature-based cluster summaries from canonical events.
-
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: кластера.
+    
     Args:
-        events: Canonical events to group by signature hash.
-
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+    
     Returns:
-        Sorted cluster summaries ready for reporting.
+        List[ClusterSummary]: Список кластеров, сгруппированных по сигнатуре и отсортированных по силе инцидентного сигнала.
     """
     grouped: Dict[str, List[Event]] = defaultdict(list)
+    # Проходим события один раз и одновременно накапливаем агрегаты для отчета.
     for event in events:
         grouped[event.signature_hash].append(event)
 
@@ -155,14 +157,14 @@ def build_cluster_summaries(events: List[Event]) -> List[ClusterSummary]:
 
 
 def top_incident_clusters(clusters: List[ClusterSummary], limit: int = 10) -> List[ClusterSummary]:
-    """Return the strongest incident-like clusters for reporting.
-
+    """Возвращает наиболее значимые элементы по частоте, весу или другому критерию. Область применения: инцидента, кластеров.
+    
     Args:
-        clusters: Cluster summaries sorted by severity and size.
-        limit: Maximum number of clusters to return.
-
+        clusters (List[ClusterSummary]): Список кластеров событий, используемый для отчетов или сохранения.
+        limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+    
     Returns:
-        Incident-like clusters when present, otherwise the top clusters overall.
+        List[ClusterSummary]: До `limit` кластеров с инцидентными событиями; если таких нет, возвращаются самые крупные кластеры.
     """
     incident_clusters = [cluster for cluster in clusters if cluster.incident_hits > 0]
     if incident_clusters:
@@ -175,7 +177,16 @@ def _pick_representative_event(
     bucket: Dict[str, object],
     representatives: Dict[str, Event],
 ) -> Event | None:
-    """Return the representative event chosen for one signature bucket."""
+    """Выполняет вспомогательную операцию для события.
+    
+    Args:
+        signature_hash (str): Значение `signature_hash`, используемое функцией при выполнении операции.
+        bucket (Dict[str, object]): Значение `bucket`, используемое функцией при выполнении операции.
+        representatives (Dict[str, Event]): Значение `representatives`, используемое функцией при выполнении операции.
+    
+    Returns:
+        Event | None: Представительное событие кластера из bucket или резервного словаря representatives; None, если события нет.
+    """
     return bucket["representative_event"] or representatives.get(signature_hash)
 
 
@@ -184,7 +195,16 @@ def _build_cluster_summary(
     bucket: Dict[str, object],
     representative_event: Event | None,
 ) -> ClusterSummary:
-    """Build one public cluster summary from an internal accumulator bucket."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: кластера, сводки.
+    
+    Args:
+        signature_hash (str): Значение `signature_hash`, используемое функцией при выполнении операции.
+        bucket (Dict[str, object]): Значение `bucket`, используемое функцией при выполнении операции.
+        representative_event (Event | None): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
+    
+    Returns:
+        ClusterSummary: Готовая сводка одного кластера с количеством событий, временем, источниками, уровнями и примером сообщения.
+    """
     source_counts = bucket["source_counts"]
     level_counts = bucket["level_counts"]
     profile_counts = bucket["profile_counts"]
@@ -236,20 +256,28 @@ def _build_cluster_summary(
 
 
 class ClusterAccumulator:
-    """Incrementally accumulate events into signature-based cluster statistics."""
+    """Постепенно накапливает события в статистику кластеров на основе сигнатур."""
 
     def __init__(self) -> None:
+        """Инициализирует объект и сохраняет параметры, необходимые для дальнейшей работы.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         self._clusters: Dict[str, Dict[str, object]] = {}
         self._representatives: Dict[str, Event] = {}
 
     def add(self, event: Event) -> None:
-        """Add one canonical event to the accumulator.
+        """Выполняет вспомогательную операцию для логики проекта.
 
         Args:
-            event: Canonical event to aggregate.
+            event (Event): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
 
         Returns:
-            None.
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         bucket = self._clusters.setdefault(
             event.signature_hash,
@@ -316,18 +344,24 @@ class ClusterAccumulator:
             bucket["representative_event"] = event
 
     def representatives(self) -> List[Event]:
-        """Return representative events for each collected signature hash.
-
+        """Выполняет вспомогательную операцию для логики проекта.
+        
+        Args:
+            Нет параметров.
+        
         Returns:
-            Representative events selected during accumulation.
+            List[Event]: Представительные события всех накопленных сигнатурных кластеров.
         """
         return list(self._representatives.values())
 
     def build_summaries(self) -> List[ClusterSummary]:
-        """Convert accumulated cluster state into sorted summaries.
-
+        """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки.
+        
+        Args:
+            Нет параметров.
+        
         Returns:
-            Cluster summaries ready for downstream reporting.
+            List[ClusterSummary]: Сводки всех накопленных кластеров, отсортированные по incident-сигналу, размеру и времени.
         """
         clusters: List[ClusterSummary] = []
         for signature_hash, bucket in self._clusters.items():
@@ -355,13 +389,13 @@ class ClusterAccumulator:
 
 
 def _cluster_confidence_score(bucket: Dict[str, object]) -> float:
-    """Compute a heuristic confidence score for one cluster bucket.
-
+    """Выполняет вспомогательную операцию для кластера, уверенности.
+    
     Args:
-        bucket: Internal cluster accumulator bucket.
-
+        bucket (Dict[str, object]): Значение `bucket`, используемое функцией при выполнении операции.
+    
     Returns:
-        Rounded confidence score in the `[0, 1]` range.
+        float: Оценка уверенности кластера от 0.0 до 1.0 на основе количества событий и инцидентного сигнала.
     """
     hits = int(bucket["hits"])
     if hits <= 0:

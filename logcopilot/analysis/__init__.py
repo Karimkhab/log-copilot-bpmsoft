@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Analysis sub-package: clustering, quality scoring and semantic grouping."""
+"""Подпакет анализа: кластеризация, оценка качества и семантическая группировка."""
 
 from .clustering import ClusterAccumulator, build_cluster_summaries, top_incident_clusters
 from .quality import AnalysisQualityAccumulator, confidence_label, coverage_ratio

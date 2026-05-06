@@ -7,11 +7,19 @@ from ..utils import build_event_from_mapping, build_generic_event, non_empty_lin
 
 
 class JsonParser(BaseParser):
-    """Parser for one-json-object-per-line logs."""
+    """Парсер логов с одним JSON-объектом на строку."""
 
     name = "json"
 
     def can_parse(self, sample: str) -> float:
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            sample (str): Образец текста лога, по которому оценивается применимость парсера.
+
+        Returns:
+            float: Оценка уверенности от 0.0 до 1.0, показывающая насколько парсер подходит для текста.
+        """
         lines = non_empty_lines(sample)
         if not lines:
             return 0.0
@@ -23,6 +31,15 @@ class JsonParser(BaseParser):
         return successes / len(lines)
 
     def parse(self, text: str, source: str | None = None):
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            text (str): Текстовое содержимое лога или фрагмент строки, которое анализируется функцией.
+            source (str | None, optional): Имя источника или файла, из которого получена запись лога.
+
+        Returns:
+            ParseResult: Результат парсинга с событиями, диагностикой и предупреждениями.
+        """
         events = []
         warnings: list[str] = []
         fallback_events = 0

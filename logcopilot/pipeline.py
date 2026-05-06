@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Public pipeline orchestration entrypoint for LogCopilot."""
+"""Публичная точка входа оркестрации конвейера LogCopilot."""
 
 from collections import Counter
 from dataclasses import asdict
@@ -48,7 +48,20 @@ def _build_trace_summary(
     timings: Dict[str, float],
     normalization_stats: NormalizationStats,
 ) -> dict:
-    """Build the trace diagnostics payload stored in the final run summary."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: сводки.
+    
+    Args:
+        input_path (Path): Путь к входному файлу или директории с логами.
+        output_path (Path): Путь к директории или файлу для записи результата.
+        source_file_count (int): Значение `source_file_count`, используемое функцией при выполнении операции.
+        event_count (int): Значение `event_count`, используемое функцией при выполнении операции.
+        multiline_merges (int): Значение `multiline_merges`, используемое функцией при выполнении операции.
+        timings (Dict[str, float]): Значение `timings`, используемое функцией при выполнении операции.
+        normalization_stats (NormalizationStats): Объект статистики нормализации, куда записываются сведения о масках.
+    
+    Returns:
+        dict: Сводка трассировки запуска: идентификатор, профиль, вход, выход, тайминги этапов и диагностические счетчики.
+    """
     return {
         "input_path": str(input_path),
         "output_path": str(output_path),
@@ -65,7 +78,16 @@ def _build_parser_diagnostics(
     events: List,
     analysis_summary,
 ) -> dict:
-    """Aggregate parser quality diagnostics from per-file parse results."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: парсера.
+    
+    Args:
+        file_results (list[ParseFileDiagnostics]): Значение `file_results`, используемое функцией при выполнении операции.
+        events (List): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        analysis_summary (Any): Сводная структура с метриками, статусами и диагностикой выполнения.
+    
+    Returns:
+        dict: Агрегированная диагностика парсеров по файлам, включая качество, предупреждения и статистику fallback-разбора.
+    """
     parser_counts = Counter(event.parser_profile for event in events)
     total_lines = sum(int(item.stats.get("total_lines", 0)) for item in file_results)
     total_events = sum(int(item.stats.get("total_events", 0)) for item in file_results)
@@ -115,8 +137,18 @@ def _build_parser_diagnostics(
 
 
 def _build_analysis_summary(events: List, source_name: str, summary: dict) -> AnalysisSummary:
-    """Build a fallback analysis summary when a profile did not provide one."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: сводки.
+    
+    Args:
+        events (List): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        source_name (str): Человекочитаемое имя источника, используемое в сводках качества.
+        summary (dict): Сводная структура с метриками, статусами и диагностикой выполнения.
+    
+    Returns:
+        AnalysisSummary: Сводка качества анализа, построенная по событиям и количеству кластеров или профильных агрегатов.
+    """
     quality = AnalysisQualityAccumulator(source_name=source_name)
+    # Проходим события один раз и одновременно накапливаем агрегаты для отчета.
     for event in events:
         quality.add(event)
     cluster_like_count = (
@@ -133,7 +165,16 @@ def _ensure_profile_analysis_summary(
     source_name: str,
     profile_result: ProfileStageResult,
 ) -> AnalysisSummary:
-    """Return the profile analysis summary, building and attaching it when missing."""
+    """Проверяет или подготавливает внутренний ресурс, необходимый для выполнения этапа. Область применения: профиля, сводки.
+    
+    Args:
+        events (List): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        source_name (str): Человекочитаемое имя источника, используемое в сводках качества.
+        profile_result (ProfileStageResult): Результат выполнения конвейера или промежуточного этапа, из которого берутся данные.
+    
+    Returns:
+        AnalysisSummary: Сводка качества из результата профиля или заново рассчитанная fallback-сводка, если профиль ее не вернул.
+    """
     analysis_summary_payload = profile_result.summary.get("analysis_summary")
     if analysis_summary_payload is None:
         analysis_summary = _build_analysis_summary(
@@ -151,7 +192,16 @@ def _build_artifact_paths(
     profile_result: ProfileStageResult,
     parquet_written: bool,
 ) -> Dict[str, str]:
-    """Merge common run artifacts with profile-specific artifact paths."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: артефакта.
+    
+    Args:
+        run_dir (Path): Значение `run_dir`, используемое функцией при выполнении операции.
+        profile_result (ProfileStageResult): Результат выполнения конвейера или промежуточного этапа, из которого берутся данные.
+        parquet_written (bool): Значение `parquet_written`, используемое функцией при выполнении операции.
+    
+    Returns:
+        Dict[str, str]: Пути к финальным продуктовыми артефактам запуска, доступным пользователю.
+    """
     artifact_paths = {
         "run_summary_json": str(run_dir / "run_summary.json"),
         **profile_result.artifact_paths,
@@ -172,7 +222,22 @@ def _build_run_summary_payload(
     profile_fit: dict,
     profile_result: ProfileStageResult,
 ) -> dict:
-    """Build the persisted run summary payload."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: сводки, полезной нагрузки.
+    
+    Args:
+        run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+        profile (str): Профиль анализа логов, определяющий набор вычислений и формат результата.
+        input_path_obj (Path): Значение `input_path_obj`, используемое функцией при выполнении операции.
+        run_dir (Path): Значение `run_dir`, используемое функцией при выполнении операции.
+        event_count (int): Значение `event_count`, используемое функцией при выполнении операции.
+        trace_summary (dict): Сводная структура с метриками, статусами и диагностикой выполнения.
+        parser_diagnostics (dict): Значение `parser_diagnostics`, используемое функцией при выполнении операции.
+        profile_fit (dict): Значение `profile_fit`, используемое функцией при выполнении операции.
+        profile_result (ProfileStageResult): Результат выполнения конвейера или промежуточного этапа, из которого берутся данные.
+    
+    Returns:
+        dict: JSON-совместимая сводка запуска со статусом, метриками, качеством, артефактами и диагностикой.
+    """
     return {
         "run_id": run_id,
         "profile": profile,
@@ -201,22 +266,27 @@ def run_pipeline(
     agent_question: str | None = None,
     agent_provider: str = "none",
 ) -> RunResult:
-    """
-    Запускает один профиль обработки от начала до конца для одного лог-файла.
-
-    :param input_path: путь к лог-файлу или директории с логами
-    :param profile: профиль обработки, по которому будет выполняться пайплайн
-    :param out_dir: директория, куда будут записаны обработанные логи и отчеты
-    :param clean_out: нужно ли очистить директорию вывода перед запуском
-    :param sample_events: устаревший параметр, оставлен для совместимости
-    :param semantic: режим семантической кластеризации
-    :param semantic_model: модель для семантического анализа сообщений
-    :param semantic_min_cluster_size: минимальный размер семантического кластера
-    :param semantic_min_samples: минимальное число соседей для семантического кластера
-    :param agent: устаревший флаг совместимости; interpretation stage запускается всегда
-    :param agent_question: вопрос для агента по результатам обработки
-    :param agent_provider: провайдер, через которого запускается агент
-    :return: результат выполнения пайплайна с путями к артефактам и сводкой
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы.
+    
+    Args:
+        input_path (str): Путь к входному файлу или директории с логами.
+        profile (str, optional): Профиль анализа логов, определяющий набор вычислений и формат результата.
+        out_dir (Optional[str], optional): Базовая директория, куда записываются результаты выполнения.
+        clean_out (bool, optional): Значение `clean_out`, используемое функцией при выполнении операции.
+        sample_events (int, optional): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        semantic (str, optional): Значение `semantic`, используемое функцией при выполнении операции.
+        semantic_model (str, optional): Значение `semantic_model`, используемое функцией при выполнении операции.
+        semantic_min_cluster_size (int, optional): Значение `semantic_min_cluster_size`, используемое функцией при выполнении операции.
+        semantic_min_samples (int | None, optional): Значение `semantic_min_samples`, используемое функцией при выполнении операции.
+        agent (str, optional): Значение `agent`, используемое функцией при выполнении операции.
+        agent_question (str | None, optional): Значение `agent_question`, используемое функцией при выполнении операции.
+        agent_provider (str, optional): Имя провайдера внешней модели, для которого строится конфигурация.
+    
+    Returns:
+        RunResult: Итог запуска конвейера: run_id, статус, профиль, счетчик событий, пути к БД, директории и артефактам.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
     """
     del sample_events
     config = PipelineConfig(
@@ -334,14 +404,28 @@ def run_pipeline(
 
 
 def main() -> None:
-    """Compatibility CLI entrypoint delegated to `logcopilot.cli`."""
+    """Выполняет вспомогательную операцию для логики проекта.
+
+    Args:
+        Нет параметров.
+
+    Returns:
+        None: Функция выполняет команду и не возвращает значение вызывающему коду.
+    """
     from .cli import main as cli_main
 
     cli_main()
 
 
 def build_parser():
-    """Compatibility wrapper for the CLI parser factory."""
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: парсера.
+
+    Args:
+        Нет параметров.
+
+    Returns:
+        argparse.ArgumentParser: Настроенный парсер аргументов командной строки.
+    """
     from .cli import build_parser as cli_build_parser
 
     return cli_build_parser()

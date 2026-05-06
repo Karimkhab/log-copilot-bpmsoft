@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Quality scoring helpers for analysis summaries and profile-fit estimation."""
+"""Вспомогательные функции оценки качества для аналитических сводок и пригодности профиля."""
 
 from collections import Counter
 import re
@@ -15,7 +15,15 @@ INCIDENT_HINT_RE = re.compile(
 
 
 def _event_ratio(events: list[Event], predicate) -> float:
-    """Compute a coverage ratio for events matching a predicate."""
+    """Выполняет вспомогательную операцию для события.
+    
+    Args:
+        events (list[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        predicate (Any): Функция-предикат, определяющая какие события учитывать в расчете.
+    
+    Returns:
+        float: Доля событий, удовлетворяющих predicate; 0.0, если список событий пуст.
+    """
     total = len(events)
     return coverage_ratio(sum(1 for event in events if predicate(event)), total)
 
@@ -26,7 +34,17 @@ def _profile_fit_label(
     selected_score: float,
     recommended_score: float,
 ) -> str:
-    """Map profile scores onto a coarse fit label."""
+    """Выполняет вспомогательную операцию для профиля.
+    
+    Args:
+        selected_profile (str): Профиль анализа, выбранный пользователем или конвейером.
+        recommended_profile (str): Профиль анализа логов, определяющий набор вычислений и формат результата.
+        selected_score (float): Значение `selected_score`, используемое функцией при выполнении операции.
+        recommended_score (float): Значение `recommended_score`, используемое функцией при выполнении операции.
+    
+    Returns:
+        str: Метка пригодности профиля (`high`, `medium` или `low`) по выбранному профилю и рассчитанным метрикам.
+    """
     fit_delta = recommended_score - selected_score
     if recommended_profile == selected_profile:
         return "high"
@@ -40,14 +58,14 @@ def _profile_fit_label(
 
 
 def coverage_ratio(numerator: float, denominator: int) -> float:
-    """Safely divide a coverage metric by its denominator.
-
+    """Выполняет вспомогательную операцию для логики проекта.
+    
     Args:
-        numerator: Covered item count or accumulated score.
-        denominator: Total item count.
-
+        numerator (float): Значение `numerator`, используемое функцией при выполнении операции.
+        denominator (int): Значение `denominator`, используемое функцией при выполнении операции.
+    
     Returns:
-        Coverage ratio in the `[0, 1]` range when denominator is positive.
+        float: Доля заполненности поля в диапазоне от 0.0 до 1.0; 0.0 при нулевом denominator.
     """
     if denominator <= 0:
         return 0.0
@@ -55,13 +73,13 @@ def coverage_ratio(numerator: float, denominator: int) -> float:
 
 
 def confidence_label(score: float) -> str:
-    """Map a numeric score onto a coarse confidence label.
-
+    """Выполняет вспомогательную операцию для уверенности.
+    
     Args:
-        score: Confidence score in the `[0, 1]` range.
-
+        score (float): Значение `score`, используемое функцией при выполнении операции.
+    
     Returns:
-        Confidence label string.
+        str: Текстовая метка уверенности (`high`, `medium` или `low`) для числового score.
     """
     if score >= 0.8:
         return "high"
@@ -71,13 +89,16 @@ def confidence_label(score: float) -> str:
 
 
 class AnalysisQualityAccumulator:
-    """Accumulate field coverage and signal statistics for one source file."""
+    """Накапливает покрытие полей и статистику сигнала для одного исходного файла."""
 
     def __init__(self, source_name: str) -> None:
-        """Initialize an empty quality accumulator.
+        """Инициализирует объект и сохраняет параметры, необходимые для дальнейшей работы.
 
         Args:
-            source_name: Display name for the analyzed source.
+            source_name (str): Человекочитаемое имя источника, используемое в сводках качества.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         self.source_name = source_name
         self.event_count = 0
@@ -94,13 +115,13 @@ class AnalysisQualityAccumulator:
         self.profile_counts: Counter[str] = Counter()
 
     def add(self, event: Event) -> None:
-        """Add one canonical event to the quality statistics.
+        """Выполняет вспомогательную операцию для логики проекта.
 
         Args:
-            event: Event to account for.
+            event (Event): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
 
         Returns:
-            None.
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         self.event_count += 1
         self.profile_counts[event.parser_profile] += 1
@@ -125,13 +146,13 @@ class AnalysisQualityAccumulator:
         self.parser_confidence_total += float(event.parser_confidence or 0.0)
 
     def build_summary(self, cluster_count: int) -> AnalysisSummary:
-        """Build an immutable analysis summary from accumulated metrics.
-
+        """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: сводки.
+        
         Args:
-            cluster_count: Number of clusters produced for the analyzed source.
-
+            cluster_count (int): Количество найденных кластеров, учитываемое в итоговой сводке.
+        
         Returns:
-            Analysis summary with coverage and signal quality metrics.
+            AnalysisSummary: Сводка качества анализа с покрытием полей, сигналами и оценкой пригодности профиля.
         """
         timestamp_coverage = coverage_ratio(self.timestamp_count, self.event_count)
         level_coverage = coverage_ratio(self.level_count, self.event_count)
@@ -187,14 +208,14 @@ class AnalysisQualityAccumulator:
 
 
 def assess_profile_fit(events: list[Event], selected_profile: str) -> dict:
-    """Estimate how well the selected profile matches the parsed event structure.
-
+    """Оценивает качество или пригодность данных по набору правил. Область применения: профиля.
+    
     Args:
-        events: Parsed canonical events for the run.
-        selected_profile: Profile chosen by the caller.
-
+        events (list[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        selected_profile (str): Профиль анализа, выбранный пользователем или конвейером.
+    
     Returns:
-        Recommendation payload with per-profile scores and fit label.
+        dict: Сводка пригодности выбранного профиля: метка качества, рекомендуемый профиль и диагностические показатели.
     """
     total = len(events)
     if total <= 0:

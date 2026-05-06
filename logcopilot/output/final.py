@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Final product output assembly for pipeline runs."""
+"""Сборка итогового продуктового вывода для запусков конвейера."""
 
 import json
 from dataclasses import asdict, is_dataclass
@@ -23,7 +23,14 @@ _COMMON_CARD_FIELDS = {
 
 
 def _dict(value: Any) -> Dict[str, Any]:
-    """Convert dict/dataclass values to plain dictionaries."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        Dict[str, Any]: Копия входного словаря или пустой словарь, если значение не является mapping.
+    """
     if value is None:
         return {}
     if is_dataclass(value):
@@ -32,7 +39,14 @@ def _dict(value: Any) -> Dict[str, Any]:
 
 
 def _scalars(payload: Dict[str, Any]) -> Dict[str, Any]:
-    """Keep only JSON scalar fields from a metrics payload."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        payload (Dict[str, Any]): Словарь с исходными или уже подготовленными данными для преобразования.
+    
+    Returns:
+        Dict[str, Any]: Только скалярные JSON-совместимые поля payload, без вложенных списков и словарей.
+    """
     return {
         key: value
         for key, value in payload.items()
@@ -41,19 +55,43 @@ def _scalars(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _write_json(path: Path, payload: Any) -> None:
-    """Write one JSON output artifact."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера. Область применения: JSON.
+
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        payload (Any): Словарь с исходными или уже подготовленными данными для преобразования.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def _card_type(card_payload: Dict[str, Any], profile: str) -> str:
-    """Normalize a profile-specific card type for product output."""
+    """Выполняет вспомогательную операцию для карточки.
+    
+    Args:
+        card_payload (Dict[str, Any]): Словарь с полями карточки, полученный от модели или детерминированного слоя.
+        profile (str): Профиль анализа логов, определяющий набор вычислений и формат результата.
+    
+    Returns:
+        str: Тип итоговой карточки: observation для наблюдательного incident-кейса, иначе card_type из payload или текущий профиль.
+    """
     if profile == "incidents" and card_payload.get("cluster_id") == "incidents-observation":
         return "observation"
     return str(card_payload.get("card_type") or profile)
 
 
 def _source_refs(card_payload: Dict[str, Any], card_type: str) -> List[Dict[str, Any]]:
-    """Build compact source references from deterministic card facts."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        card_payload (Dict[str, Any]): Словарь с полями карточки, полученный от модели или детерминированного слоя.
+        card_type (str): Тип карточки, определяющий способ извлечения ссылок на источники.
+    
+    Returns:
+        List[Dict[str, Any]]: Список словарей с нормализованными фактами или строками отчета.
+    """
     if card_type in {"incident", "observation"}:
         return [
             {
@@ -85,7 +123,15 @@ def _source_refs(card_payload: Dict[str, Any], card_type: str) -> List[Dict[str,
 
 
 def _to_finding_card(card: Any, profile: str) -> FindingCard:
-    """Convert an internal agent card into the public FindingCard contract."""
+    """Выполняет вспомогательную операцию для карточки.
+    
+    Args:
+        card (Any): Карточка вывода или ее полезная нагрузка, которую нужно преобразовать.
+        profile (str): Профиль анализа логов, определяющий набор вычислений и формат результата.
+    
+    Returns:
+        FindingCard: Финальная продуктовая карточка с типом, заголовком, серьезностью, summary, evidence, действиями и source_refs.
+    """
     card_payload = card.as_dict() if hasattr(card, "as_dict") else _dict(card)
     card_type = _card_type(card_payload, profile)
     payload = {
@@ -108,7 +154,14 @@ def _to_finding_card(card: Any, profile: str) -> FindingCard:
 
 
 def _build_key_metrics(context: PipelineContext) -> Dict[str, Any]:
-    """Build top-level product metrics from profile and agent outputs."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        Dict[str, Any]: Основные метрики запуска для публичной сводки: профиль, события, качество, parser-fit и профильные счетчики.
+    """
     profile_summary = _dict(context.profile_result.summary if context.profile_result else {})
     metrics = _scalars(profile_summary)
     agent_result = context.agent_result
@@ -126,7 +179,18 @@ def _build_key_metrics(context: PipelineContext) -> Dict[str, Any]:
 
 
 def _build_run_summary(context: PipelineContext, findings: List[FindingCard]) -> RunSummary:
-    """Build the public product summary for a completed run."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: сводки.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+        findings (List[FindingCard]): Значение `findings`, используемое функцией при выполнении операции.
+    
+    Returns:
+        RunSummary: Итоговая продуктовая сводка запуска с метриками, качеством, находками и путями артефактов.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if context.execution_quality is None:
         raise RuntimeError("Execution quality must be validated before final output.")
     if context.agent_result is None:
@@ -153,7 +217,17 @@ def _build_run_summary(context: PipelineContext, findings: List[FindingCard]) ->
 
 
 def run_final_output_generation(context: PipelineContext) -> PipelineContext:
-    """Build and persist the final product output for one run."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_final_output_generation`.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if context.agent_result is None:
         raise RuntimeError("Agent interpretation must run before final output generation.")
     if context.execution_quality is None:

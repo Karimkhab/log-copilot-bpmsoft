@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Command-line interface for LogCopilot pipeline execution."""
+"""Интерфейс командной строки для запуска конвейера LogCopilot."""
 
 import argparse
 
@@ -14,6 +14,16 @@ def _add_run_arguments(
     require_input: bool,
     require_profile: bool,
 ) -> None:
+    """Выполняет вспомогательную операцию для логики проекта.
+
+    Args:
+        parser (argparse.ArgumentParser): Объект парсера или построитель аргументов, который настраивается функцией.
+        require_input (bool): Признак того, что путь к входному лог-файлу обязателен для выбранного режима.
+        require_profile (bool): Признак того, что профиль обработки обязателен для выбранного режима.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     parser.add_argument("--input", required=require_input, help="Path to a single .log file")
     parser.add_argument(
         "--profile",
@@ -34,6 +44,14 @@ def _add_run_arguments(
 
 
 def _print_run_result(result: RunResult) -> None:
+    """Выполняет вспомогательную операцию для логики проекта.
+
+    Args:
+        result (RunResult): Результат выполнения конвейера или промежуточного этапа, из которого берутся данные.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     print(f"run_id: {result.run_id}")
     print(f"profile: {result.profile}")
     print(f"status: {result.status}")
@@ -45,7 +63,14 @@ def _print_run_result(result: RunResult) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the CLI parser for pipeline execution."""
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: парсера.
+
+    Args:
+        Нет параметров.
+
+    Returns:
+        argparse.ArgumentParser: Настроенный парсер аргументов командной строки.
+    """
     parser = argparse.ArgumentParser(description="LogCopilot CLI")
     _add_run_arguments(parser, require_input=False, require_profile=False)
     subparsers = parser.add_subparsers(dest="command")
@@ -56,7 +81,14 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    """Parse command-line arguments and execute the requested pipeline mode."""
+    """Выполняет вспомогательную операцию для логики проекта.
+
+    Args:
+        Нет параметров.
+
+    Returns:
+        None: Функция выполняет команду и не возвращает значение вызывающему коду.
+    """
     parser = build_parser()
     args = parser.parse_args()
     if not args.input:

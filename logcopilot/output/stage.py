@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Pipeline stage entrypoints for common artifact writing."""
+"""Точки входа этапов конвейера для записи общих артефактов."""
 
 import csv
 import json
@@ -30,7 +30,17 @@ _WHITESPACE_RE = re.compile(r"\s+")
 
 
 def run_write_events_csv(context: PipelineContext) -> PipelineContext:
-    """Keep the legacy stage boundary without persisting events CSV by default."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: событий, CSV.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_write_events_csv`.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if context.event_build_result is None:
         raise RuntimeError("Event building must run before events CSV writing.")
     context.timings["write_events_csv"] = 0.0
@@ -39,12 +49,27 @@ def run_write_events_csv(context: PipelineContext) -> PipelineContext:
 
 
 def _write_markdown(path: Path, lines: List[str]) -> None:
-    """Write Markdown content using the project's newline convention."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера.
+
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        lines (List[str]): Список строк лога, обрабатываемых функцией.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
 
 
 def _normalize_heatmap_text(value: str | None) -> str:
-    """Normalize free-form values used in heatmap artifact rendering."""
+    """Нормализует внутреннее значение к каноническому виду для дальнейших расчетов. Область применения: тепловой карты.
+    
+    Args:
+        value (str | None): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        str: Очищенный текст для тепловой карты; `unknown`, если значение пустое.
+    """
     if not value:
         return "unknown"
     normalized = _WHITESPACE_RE.sub(" ", value).strip()
@@ -52,7 +77,14 @@ def _normalize_heatmap_text(value: str | None) -> str:
 
 
 def _normalize_heatmap_path(path: str | None) -> str | None:
-    """Normalize request paths by masking volatile identifiers."""
+    """Нормализует внутреннее значение к каноническому виду для дальнейших расчетов. Область применения: тепловой карты, пути.
+    
+    Args:
+        path (str | None): Путь к файлу или артефакту, с которым работает функция.
+    
+    Returns:
+        str | None: Нормализованный HTTP-путь без query-string и завершающего слеша; None для пустого пути.
+    """
     if not path:
         return None
     raw_path = urlsplit(path).path or path
@@ -67,7 +99,14 @@ def _normalize_heatmap_path(path: str | None) -> str | None:
 
 
 def _derive_heatmap_operation(event: Event) -> str:
-    """Derive an operation label for heatmap artifact rendering."""
+    """Выполняет вспомогательную операцию для тепловой карты.
+    
+    Args:
+        event (Event): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
+    
+    Returns:
+        str: Название операции для тепловой карты: компонент, HTTP-метод с путем или запасной источник события.
+    """
     normalized_path = _normalize_heatmap_path(event.path)
     if normalized_path:
         method = _normalize_heatmap_text(event.method).upper() if getattr(event, "method", None) else None
@@ -81,7 +120,15 @@ def _derive_heatmap_operation(event: Event) -> str:
 
 
 def _write_heatmap_timeseries_csv(path: Path, rows: List[dict]) -> None:
-    """Write heatmap rows to CSV."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера. Область применения: тепловой карты, CSV.
+
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        rows (List[dict]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     fieldnames = ["bucket_start", "component", "operation", "hits", "qps", "p95_latency_ms"]
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -90,12 +137,30 @@ def _write_heatmap_timeseries_csv(path: Path, rows: List[dict]) -> None:
 
 
 def _write_heatmap_findings_json(path: Path, findings: dict) -> None:
-    """Write heatmap findings to JSON."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера. Область применения: тепловой карты, JSON.
+
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        findings (dict): Значение `findings`, используемое функцией при выполнении операции.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     path.write_text(json.dumps(findings, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def _write_top_hotspots_md(path: Path, rows: List[dict], events: List[Event], findings: dict) -> None:
-    """Write a Markdown summary of the hottest heatmap buckets."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера. Область применения: Markdown.
+
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        rows (List[dict]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        findings (dict): Значение `findings`, используемое функцией при выполнении операции.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     component_count = len({_normalize_heatmap_text(event.component) for event in events})
     operation_count = len({_derive_heatmap_operation(event) for event in events})
     top_components = findings.get("top_components", [])
@@ -136,7 +201,15 @@ def _write_top_hotspots_md(path: Path, rows: List[dict], events: List[Event], fi
 
 
 def _write_traffic_summary_csv(path: Path, rows: List[dict]) -> None:
-    """Write traffic summary rows to CSV."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера. Область применения: трафика, сводки, CSV.
+
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        rows (List[dict]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     fieldnames = [
         "method",
         "path",
@@ -154,7 +227,15 @@ def _write_traffic_summary_csv(path: Path, rows: List[dict]) -> None:
 
 
 def _write_latency_report_md(path: Path, rows: List[dict]) -> None:
-    """Write a Markdown latency report for the slowest endpoints."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера. Область применения: задержки, Markdown.
+
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        rows (List[dict]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     lines = ["# Traffic Latency Report", "", "## Top endpoints by latency", ""]
     if not rows:
         lines.append("No traffic rows were produced.")
@@ -175,7 +256,15 @@ def _write_latency_report_md(path: Path, rows: List[dict]) -> None:
 
 
 def _write_suspicious_traffic_md(path: Path, anomalies: List[dict]) -> None:
-    """Write a Markdown report for suspicious traffic anomalies."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера. Область применения: трафика, Markdown.
+
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        anomalies (List[dict]): Значение `anomalies`, используемое функцией при выполнении операции.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     lines = ["# Suspicious Traffic", ""]
     if not anomalies:
         lines.append("No suspicious patterns were detected.")
@@ -194,7 +283,15 @@ def _write_suspicious_traffic_md(path: Path, anomalies: List[dict]) -> None:
 
 
 def _write_incidents_artifacts(context: PipelineContext, payload: dict) -> dict[str, str]:
-    """Write incidents profile artifacts and return their paths."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера. Область применения: инцидентов, артефактов.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+        payload (dict): Словарь с исходными или уже подготовленными данными для преобразования.
+    
+    Returns:
+        dict[str, str]: Пути к артефактам профиля инцидентов, записанным в директорию запуска.
+    """
     clusters_path = context.run_dir / "clusters.csv"
     semantic_path = context.run_dir / "semantic_clusters.csv"
     top_incidents_path = context.run_dir / "top_incidents.md"
@@ -223,7 +320,15 @@ def _write_incidents_artifacts(context: PipelineContext, payload: dict) -> dict[
 
 
 def _write_heatmap_artifacts(context: PipelineContext, payload: dict) -> dict[str, str]:
-    """Write heatmap profile artifacts and return their paths."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера. Область применения: тепловой карты, артефактов.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+        payload (dict): Словарь с исходными или уже подготовленными данными для преобразования.
+    
+    Returns:
+        dict[str, str]: Пути к CSV, JSON и Markdown-артефактам тепловой карты.
+    """
     timeseries_path = context.run_dir / "heatmap_timeseries.csv"
     hotspots_path = context.run_dir / "top_hotspots.md"
     findings_path = context.run_dir / "heatmap_findings.json"
@@ -239,7 +344,15 @@ def _write_heatmap_artifacts(context: PipelineContext, payload: dict) -> dict[st
 
 
 def _write_traffic_artifacts(context: PipelineContext, payload: dict) -> dict[str, str]:
-    """Write traffic profile artifacts and return their paths."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера. Область применения: трафика, артефактов.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+        payload (dict): Словарь с исходными или уже подготовленными данными для преобразования.
+    
+    Returns:
+        dict[str, str]: Пути к CSV и Markdown-артефактам профиля трафика.
+    """
     summary_path = context.run_dir / "traffic_summary.csv"
     latency_path = context.run_dir / "latency_report.md"
     suspicious_path = context.run_dir / "suspicious_traffic.md"
@@ -255,7 +368,17 @@ def _write_traffic_artifacts(context: PipelineContext, payload: dict) -> dict[st
 
 
 def run_artifact_generation(context: PipelineContext) -> PipelineContext:
-    """Keep the legacy stage boundary without persisting profile debug artifacts by default."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: артефакта.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_artifact_generation`.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     profile_result = context.profile_result
     if profile_result is None:
         raise RuntimeError("Profile computation must run before artifact generation.")

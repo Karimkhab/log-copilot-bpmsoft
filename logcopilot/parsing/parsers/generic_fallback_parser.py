@@ -28,6 +28,16 @@ COMPONENT_SPLIT_RE = re.compile(r"^(?P<head>[^:|\-]{1,64})\s(?:-|:|\|)\s(?P<body
 
 
 def _build_fallback_event(raw_text: str, *, source: str | None, line_count: int) -> CanonicalEvent:
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: резервного сценария, события.
+    
+    Args:
+        raw_text (str): Исходный текст записи лога, сохраняемый для диагностики и повторного анализа.
+        source (str | None): Имя источника или файла, из которого получена запись лога.
+        line_count (int): Количество строк, входящих в одну логическую запись лога.
+    
+    Returns:
+        CanonicalEvent: Минимально структурированное событие fallback-парсера с сохраненным исходным текстом.
+    """
     event = build_generic_event(
         raw_text,
         parser_name="generic_fallback",
@@ -107,19 +117,44 @@ def _build_fallback_event(raw_text: str, *, source: str | None, line_count: int)
 
 
 class GenericFallbackParser(BaseParser):
-    """Last-resort parser that preserves data without over-claiming structure."""
+    """Резервный парсер, который сохраняет данные и не завышает структурированность разбора."""
 
     name = "generic_fallback"
 
     def can_parse(self, sample: str) -> float:
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            sample (str): Образец текста лога, по которому оценивается применимость парсера.
+
+        Returns:
+            float: Оценка уверенности от 0.0 до 1.0, показывающая насколько парсер подходит для текста.
+        """
         return 0.15 if sample.strip() else 0.0
 
     def parse(self, text: str, source: str | None = None):
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            text (str): Текстовое содержимое лога или фрагмент строки, которое анализируется функцией.
+            source (str | None, optional): Имя источника или файла, из которого получена запись лога.
+
+        Returns:
+            ParseResult: Результат парсинга с событиями, диагностикой и предупреждениями.
+        """
         events = []
         lines = text.splitlines()
         buffer: list[str] = []
 
         def flush() -> None:
+            """Выполняет вспомогательную операцию для логики проекта.
+
+            Args:
+                Нет параметров.
+
+            Returns:
+                None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+            """
             if not buffer:
                 return
             raw_text = "\n".join(buffer).strip()

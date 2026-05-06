@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Small provider config for the one-shot pipeline agent."""
+"""Небольшая конфигурация провайдера для однократного агентского этапа конвейера."""
 
 from dataclasses import dataclass
 import os
@@ -31,7 +31,7 @@ AGENT_CONTEXT_LIMITS = {
 
 @dataclass(frozen=True)
 class AgentModelConfig:
-    """Runtime configuration for one optional structured LLM call."""
+    """Конфигурация времени выполнения для одного опционального структурированного вызова языковой модели."""
 
     provider: str = "none"
     model: str = ""
@@ -42,7 +42,14 @@ class AgentModelConfig:
 
 
 def _dotenv_path() -> Path | None:
-    """Find `.env` in the current directory or one of its parents."""
+    """Выполняет вспомогательную операцию для пути.
+    
+    Args:
+        Нет параметров.
+    
+    Returns:
+        Path | None: Путь к ближайшему `.env` в текущей директории или родителях; None, если файл не найден.
+    """
     cwd = Path.cwd().resolve()
     for directory in (cwd, *cwd.parents):
         candidate = directory / ".env"
@@ -52,7 +59,14 @@ def _dotenv_path() -> Path | None:
 
 
 def _read_dotenv() -> Dict[str, str]:
-    """Read simple KEY=VALUE rows from `.env`."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        Нет параметров.
+    
+    Returns:
+        Dict[str, str]: Пары ключ-значение из `.env`; пустой словарь, если файл отсутствует или не содержит подходящих строк.
+    """
     path = _dotenv_path()
     if path is None:
         return {}
@@ -71,14 +85,32 @@ def _read_dotenv() -> Dict[str, str]:
 
 
 def _env(name: str, dotenv_values: Dict[str, str], default: str = "") -> str:
-    """Read one supported config value from environment or `.env`."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        name (str): Имя переменной, поля, провайдера или ресурса, значение которого обрабатывается.
+        dotenv_values (Dict[str, str]): Значения, прочитанные из dotenv-файла и используемые вместе с окружением.
+        default (str, optional): Значение по умолчанию, возвращаемое при невозможности корректного преобразования.
+    
+    Returns:
+        str: Значение переменной из окружения или `.env`, очищенное от пробелов; если переменной нет, возвращается default.
+    """
     if name in os.environ:
         return os.environ[name].strip()
     return dotenv_values.get(name, default).strip()
 
 
 def _float_env(name: str, dotenv_values: Dict[str, str], default: float) -> float:
-    """Read one float config value with a safe fallback."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        name (str): Имя переменной, поля, провайдера или ресурса, значение которого обрабатывается.
+        dotenv_values (Dict[str, str]): Значения, прочитанные из dotenv-файла и используемые вместе с окружением.
+        default (float): Значение по умолчанию, возвращаемое при невозможности корректного преобразования.
+    
+    Returns:
+        float: Числовое значение переменной окружения или default, если значение отсутствует либо не разбирается как число.
+    """
     raw_value = _env(name, dotenv_values, str(default))
     try:
         return float(raw_value)
@@ -87,7 +119,17 @@ def _float_env(name: str, dotenv_values: Dict[str, str], default: float) -> floa
 
 
 def resolve_agent_model_config(provider: str) -> AgentModelConfig:
-    """Resolve `none` or `yandex` provider config."""
+    """Выполняет вспомогательную операцию для агентского этапа, конфигурации.
+    
+    Args:
+        provider (str): Имя провайдера внешней модели, для которого строится конфигурация.
+    
+    Returns:
+        AgentModelConfig: Полная конфигурация выбранного провайдера агента с моделью, URL, ключом, folder_id и таймаутом.
+    
+    Raises:
+        ValueError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     provider = (provider or "none").lower()
     if provider == "none":
         return AgentModelConfig(provider="none")
@@ -109,7 +151,14 @@ def resolve_agent_model_config(provider: str) -> AgentModelConfig:
 
 
 def provider_is_configured(config: AgentModelConfig) -> bool:
-    """Return whether the configured provider should make a network call."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        config (AgentModelConfig): Конфигурация запуска или внешнего провайдера, влияющая на поведение функции.
+    
+    Returns:
+        bool: True, если внешний провайдер содержит все обязательные параметры для вызова модели; иначе False.
+    """
     if config.provider == "none":
         return False
     return bool(config.api_key and config.folder_id and config.model and config.base_url)

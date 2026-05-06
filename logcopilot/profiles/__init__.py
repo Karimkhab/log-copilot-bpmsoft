@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Processing profiles: incidents, heatmap, traffic."""
+"""Профили обработки: инциденты, тепловая карта и трафик."""
 
 from .heatmap import run_heatmap_profile
 from .incidents import run_incidents_profile

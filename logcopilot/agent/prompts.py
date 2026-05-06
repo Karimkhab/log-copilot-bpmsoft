@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Short profile prompts for the structured pipeline agent."""
+"""Короткие профильные промпты для структурированного агентского этапа конвейера."""
 
 import json
 from typing import Any, Dict, List
@@ -53,12 +53,26 @@ PROFILE_RULES = {
 
 
 def _json(payload: Dict[str, Any]) -> str:
-    """Serialize prompt payload as stable JSON."""
+    """Выполняет вспомогательную операцию для JSON.
+    
+    Args:
+        payload (Dict[str, Any]): Словарь с исходными или уже подготовленными данными для преобразования.
+    
+    Returns:
+        str: JSON-строка с отсортированными ключами и сохранением русских символов.
+    """
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
 
 
 def _system_prompt(profile: str) -> str:
-    """Return common model instructions."""
+    """Выполняет вспомогательную операцию для промпта.
+    
+    Args:
+        profile (str): Профиль анализа логов, определяющий набор вычислений и формат результата.
+    
+    Returns:
+        str: Системный промпт для выбранного профиля с требованиями к языку, формату и строгости интерпретации.
+    """
     rules = " ".join(PROFILE_RULES[profile])
     return (
         "Ты one-shot structured interpreter внутри LogCopilot. "
@@ -80,7 +94,15 @@ def _system_prompt(profile: str) -> str:
 
 
 def _messages(input_context: AgentInputContext, task: str) -> List[Dict[str, str]]:
-    """Build profile messages."""
+    """Выполняет вспомогательную операцию для сообщений.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+        task (str): Текст задачи, который включается в промпт агентского этапа.
+    
+    Returns:
+        List[Dict[str, str]]: Список словарей с нормализованными фактами или строками отчета.
+    """
     payload = {
         "task": task,
         "quality_requirements": {
@@ -99,22 +121,53 @@ def _messages(input_context: AgentInputContext, task: str) -> List[Dict[str, str
 
 
 def build_incidents_prompt(input_context: AgentInputContext) -> List[Dict[str, str]]:
-    """Build the incidents structured-output prompt."""
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: инцидентов, промпта.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+    
+    Returns:
+        List[Dict[str, str]]: Сообщения system/user для интерпретации профиля инцидентов внешней моделью.
+    """
     return _messages(input_context, "Интерпретируй incident clusters и operational observations.")
 
 
 def build_heatmap_prompt(input_context: AgentInputContext) -> List[Dict[str, str]]:
-    """Build the heatmap structured-output prompt."""
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: тепловой карты, промпта.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+    
+    Returns:
+        List[Dict[str, str]]: Сообщения system/user для интерпретации профиля тепловой карты внешней моделью.
+    """
     return _messages(input_context, "Интерпретируй heatmap hotspots и концентрацию нагрузки.")
 
 
 def build_traffic_prompt(input_context: AgentInputContext) -> List[Dict[str, str]]:
-    """Build the traffic structured-output prompt."""
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: трафика, промпта.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+    
+    Returns:
+        List[Dict[str, str]]: Сообщения system/user для интерпретации профиля трафика внешней моделью.
+    """
     return _messages(input_context, "Интерпретируй traffic anomalies, errors, latency и load.")
 
 
 def build_agent_messages(input_context: AgentInputContext) -> List[Dict[str, str]]:
-    """Dispatch to the selected profile prompt."""
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: агентского этапа, сообщений.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+    
+    Returns:
+        List[Dict[str, str]]: Набор сообщений для внешней модели, выбранный по профилю из input_context.
+    
+    Raises:
+        ValueError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if input_context.profile == "incidents":
         return build_incidents_prompt(input_context)
     if input_context.profile == "heatmap":
