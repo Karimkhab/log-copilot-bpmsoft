@@ -4,6 +4,7 @@ import unittest
 
 from logcopilot.parsing import build_default_registry, iter_events_for_file, parse_file
 from logcopilot.parsing.parsers import (
+    BPMSoftRequestParser,
     GenericFallbackParser,
     JsonParser,
     LogfmtParser,
@@ -73,6 +74,24 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertEqual(245.0, event.latency_ms)
         self.assertEqual("127.0.0.1", event.client_ip)
         self.assertEqual("curl/8.0", event.user_agent)
+
+    def test_bpmsoft_request_parser_extracts_method_path_status_and_ip(self) -> None:
+        parser = BPMSoftRequestParser()
+        content = (
+            "2025-12-01 00:00:23 ::ffff:10.5.31.156 POST /ServiceModel/AuthService.svc/Login -  "
+            "Integration ::ffff:10.5.31.159   200 129\n"
+        )
+
+        result = parser.parse(content, source="Request.log")
+
+        self.assertEqual("bpmsoft_request", result.parser_name)
+        self.assertEqual(1, len(result.events))
+        event = result.events[0]
+        self.assertEqual("POST", event.http_method)
+        self.assertEqual("/ServiceModel/AuthService.svc/Login", event.http_path)
+        self.assertEqual(200, event.http_status)
+        self.assertEqual("::ffff:10.5.31.159", event.client_ip)
+        self.assertEqual(129, event.response_size)
 
     def test_syslog_parser_extracts_host_component_and_message(self) -> None:
         parser = SyslogParser()
@@ -164,6 +183,16 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertEqual("web_access", parser.name)
         self.assertFalse(selection.used_fallback)
 
+    def test_registry_selection_prefers_bpmsoft_request_for_bpmsoft_request_lines(self) -> None:
+        registry = build_default_registry()
+        parser, selection = registry.select(
+            "2025-12-01 00:00:23 ::ffff:10.5.31.156 PATCH /odata/Product(6a9cfde5) -  "
+            "Integration ::ffff:10.5.31.159   204 223\n"
+        )
+
+        self.assertEqual("bpmsoft_request", parser.name)
+        self.assertFalse(selection.used_fallback)
+
     def test_confidence_scoring_favors_structured_parse_over_generic(self) -> None:
         structured = JsonParser().parse('{"timestamp":"2026-03-11T08:21:15Z","level":"info","message":"ok"}\n')
         generic = GenericFallbackParser().parse("just some raw text\n")
@@ -196,6 +225,21 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertEqual("logfmt", result.parser_name)
         self.assertEqual(1, result.stats["total_events"])
         self.assertGreaterEqual(result.stats["parsed_level_ratio"], 1.0)
+
+    def test_parse_file_uses_filename_hint_for_business_process_logs(self) -> None:
+        content = """2026-01-13 07:54:28,935 ERROR  Process Start - BPMSoft.Core.ProcessParameterValueException: boom
+   at Foo.Bar()
+   at Foo.Baz()
+"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            file_path = root / "BusinessProcess.log"
+            file_path.write_text(content, encoding="utf-8")
+
+            result = parse_file(file_path, root)
+
+        self.assertEqual("bpmsoft_business_process", result.parser_name)
+        self.assertEqual(1, result.stats["total_events"])
 
     def test_profile_fit_prefers_traffic_for_access_logs(self) -> None:
         parser = WebAccessParser()

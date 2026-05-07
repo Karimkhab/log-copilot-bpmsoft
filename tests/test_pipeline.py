@@ -63,10 +63,14 @@ class PipelineTests(unittest.TestCase):
             self.assertNotIn("findings", result.run_summary)
             self.assertTrue((Path(result.output_dir) / "run_summary.json").exists())
             self.assertTrue((Path(result.output_dir) / "findings.json").exists())
+            self.assertTrue((Path(result.output_dir) / "siem_findings.jsonl").exists())
+            self.assertTrue((Path(result.output_dir) / "zabbix_metrics.json").exists())
             self.assertEqual(
                 {
                     "run_summary_json": str(Path(result.output_dir) / "run_summary.json"),
                     "findings_json": str(Path(result.output_dir) / "findings.json"),
+                    "siem_findings_jsonl": str(Path(result.output_dir) / "siem_findings.jsonl"),
+                    "zabbix_metrics_json": str(Path(result.output_dir) / "zabbix_metrics.json"),
                 },
                 result.artifact_paths,
             )

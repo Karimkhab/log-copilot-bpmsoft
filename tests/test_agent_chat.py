@@ -117,6 +117,55 @@ class AgentStructuredLayerTests(unittest.TestCase):
         self.assertIsInstance(result.cards[0], IncidentCard)
         self.assertEqual("cluster-a", result.cards[0].cluster_id)
 
+    def test_heatmap_card_text_falls_back_when_llm_text_is_not_grounded_to_payload(self) -> None:
+        input_context = AgentInputContext(
+            profile="heatmap",
+            run_id="r1",
+            run_summary={"event_count": 20},
+            parser_diagnostics={"parse_quality": {"score": 0.9, "label": "high"}},
+            profile_fit={"fit_label": "high"},
+            facts={
+                "hotspots": [
+                    {
+                        "card_key": "2026-03-11 08:20:00|POST /api/orders",
+                        "bucket_start": "2026-03-11 08:20:00",
+                        "component": "Gateway",
+                        "operation": "POST /api/orders",
+                        "hits": 12,
+                        "qps": 0.2,
+                        "p95_latency_ms": 1200.0,
+                    }
+                ]
+            },
+        )
+        payload = {
+            "profile": "heatmap",
+            "overall_status": "warning",
+            "confidence": 0.82,
+            "short_summary": "Есть hotspot.",
+            "technical_summary": "Найдена нагрузка.",
+            "business_summary": "Есть влияние.",
+            "key_findings": ["Проблемный компонент Scheduler."],
+            "recommended_actions": ["Проверить компонент."],
+            "limitations": [],
+            "cards": [
+                {
+                    "card_key": "2026-03-11 08:20:00|POST /api/orders",
+                    "card_type": "heatmap",
+                    "title": "Высокая нагрузка на Scheduler",
+                    "severity": "high",
+                    "summary": "Компонент Scheduler получает сотни запросов.",
+                    "evidence": ["Scheduler имеет 500 запросов."],
+                }
+            ],
+        }
+
+        result = validate_agent_result_payload(payload, input_context, AgentModelConfig(provider="yandex", model="m"))
+
+        self.assertEqual("Hotspot: POST /api/orders", result.cards[0].title)
+        self.assertEqual("POST /api/orders produced 12 hits in bucket 2026-03-11 08:20:00.", result.cards[0].summary)
+        self.assertIn("hits=12", result.cards[0].evidence[0])
+
     def test_yandex_config_reads_yc_dotenv_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

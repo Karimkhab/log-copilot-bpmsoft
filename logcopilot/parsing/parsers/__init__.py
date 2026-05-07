@@ -1,3 +1,9 @@
+from .bpmsoft_parsers import (
+    BPMSoftAspNetCoreParser,
+    BPMSoftBusinessProcessParser,
+    BPMSoftErrorParser,
+    BPMSoftRequestParser,
+)
 from .generic_fallback_parser import GenericFallbackParser
 from .json_parser import JsonParser
 from .logfmt_parser import LogfmtParser
@@ -7,6 +13,10 @@ from .web_access_parser import WebAccessParser
 from .windows_servicing_parser import WindowsServicingParser
 
 __all__ = [
+    "BPMSoftAspNetCoreParser",
+    "BPMSoftBusinessProcessParser",
+    "BPMSoftErrorParser",
+    "BPMSoftRequestParser",
     "GenericFallbackParser",
     "JsonParser",
     "LogfmtParser",
