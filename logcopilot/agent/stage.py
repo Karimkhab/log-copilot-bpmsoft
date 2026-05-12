@@ -39,6 +39,7 @@ _STATUS_RANK = {"limited": 0, "ok": 0, "warning": 1, "critical": 2}
 _SEVERITY_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 _LLM_MAX_TOKENS = 1600
 _CARD_FACT_FIELDS = {
+    "card_key",
     "cluster_id",
     "hits",
     "incident_hits",
@@ -586,31 +587,22 @@ def _fallback_by_card_key(input_context: AgentInputContext) -> Dict[str, Dict[st
     facts = _as_dict(input_context.facts)
     if input_context.profile == "incidents":
         return {
-            _clip_text(_as_dict(item).get("cluster_id", ""), 120): _as_dict(item)
+            _clip_text(_as_dict(item).get("card_key") or _as_dict(item).get("cluster_id", ""), 120): _as_dict(item)
             for item in _as_list(facts.get("compact_llm_ready_cluster_facts"), MAX_INCIDENT_CARDS)
         }
     if input_context.profile == "heatmap":
         return {
-            "|".join(
-                [
-                    _clip_text(_as_dict(item).get("bucket_start", ""), 80),
-                    _clip_text(_as_dict(item).get("operation", ""), 160),
-                ]
-            ): _as_dict(item)
+            _clip_text(_as_dict(item).get("card_key", ""), 320): _as_dict(item)
             for item in _as_list(facts.get("hotspots"), MAX_HEATMAP_CARDS)
         }
     if input_context.profile == "traffic":
         traffic_findings = _as_dict(facts.get("traffic_findings"))
-        rows = _as_list(traffic_findings.get("top_endpoints_by_hits"), MAX_TRAFFIC_CARDS)
+        rows = [_as_dict(item) for item in _as_list(traffic_findings.get("top_endpoints_by_hits"), MAX_TRAFFIC_CARDS)]
+        patterns = [_as_dict(item) for item in _as_list(facts.get("suspicious_patterns"), MAX_TRAFFIC_CARDS)]
         return {
-            "|".join(
-                [
-                    _clip_text(_as_dict(item).get("method", ""), 32),
-                    _clip_text(_as_dict(item).get("path", ""), 160),
-                    str(_as_dict(item).get("http_status")),
-                ]
-            ): _as_dict(item)
-            for item in rows
+            _clip_text(item.get("card_key", ""), 400): item
+            for item in (patterns + rows)
+            if _clip_text(item.get("card_key", ""), 400)
         }
     return {}
 
@@ -637,12 +629,71 @@ def _merge_card_payload(fallback: Dict[str, Any], payload: Dict[str, Any]) -> Di
     return merged
 
 
+def _card_text_anchors(profile: str, fact: Dict[str, Any]) -> List[str]:
+    """Return short deterministic anchors that card text must stay close to."""
+    anchors: List[str] = []
+    if profile == "incidents":
+        anchors.extend(
+            [
+                _clip_text(fact.get("cluster_id", ""), 120),
+                _clip_text(fact.get("exception_type", ""), 120),
+                str(_int_value(fact.get("hits"))),
+                str(_int_value(fact.get("incident_hits"))),
+            ]
+        )
+    elif profile == "heatmap":
+        anchors.extend(
+            [
+                _clip_text(fact.get("bucket_start", ""), 80),
+                _clip_text(fact.get("component", ""), 160),
+                _clip_text(fact.get("operation", ""), 220),
+                str(_int_value(fact.get("hits"))),
+            ]
+        )
+    elif profile == "traffic":
+        anchors.extend(
+            [
+                _clip_text(fact.get("pattern_type") or fact.get("anomaly_type") or "", 80),
+                _clip_text(fact.get("method", ""), 32),
+                _clip_text(fact.get("path", ""), 220),
+                str(_optional_int(fact.get("http_status"))),
+                str(_int_value(fact.get("hits") or _as_dict(fact.get("payload")).get("request_count"))),
+            ]
+        )
+    return [anchor for anchor in anchors if anchor and anchor != "None" and anchor != "0"]
+
+
+def _contains_anchor(text: str, anchors: List[str]) -> bool:
+    """Return whether a text snippet contains at least one deterministic anchor."""
+    normalized = _clip_text(text, 1000).lower()
+    if not normalized or not anchors:
+        return False
+    return any(anchor.lower() in normalized for anchor in anchors)
+
+
+def _grounded_text(value: Any, deterministic: str, anchors: List[str], limit: int) -> str:
+    """Use LLM text only when it still mentions deterministic anchors."""
+    candidate = _clip_text(value, limit)
+    if candidate and (not anchors or _contains_anchor(candidate, anchors)):
+        return candidate
+    return deterministic
+
+
+def _grounded_list(value: Any, deterministic: List[str], anchors: List[str], limit: int) -> List[str]:
+    """Use LLM text lists only when they stay close to deterministic anchors."""
+    items = _string_list(value, limit)
+    if items and any(_contains_anchor(item, anchors) for item in items):
+        return items
+    return deterministic
+
+
 def _validate_incident_card(payload: Dict[str, Any], fallback: Dict[str, Any]) -> IncidentCard:
     """Validate one LLM-produced incident card."""
     merged = _merge_card_payload(fallback, payload)
     deterministic = _incident_card_from_fact(merged)
+    anchors = _card_text_anchors("incidents", merged)
     return IncidentCard(
-        title=_clip_text(payload.get("title"), 220) or deterministic.title,
+        title=_grounded_text(payload.get("title"), deterministic.title, anchors, 220),
         severity=_severity_floor(payload.get("severity"), deterministic.severity),
         confidence=_confidence(payload.get("confidence"), deterministic.confidence),
         cluster_id=_clip_text(merged.get("cluster_id", ""), 120),
@@ -651,8 +702,8 @@ def _validate_incident_card(payload: Dict[str, Any], fallback: Dict[str, Any]) -
         first_seen=_clip_text(merged.get("first_seen", ""), 80),
         last_seen=_clip_text(merged.get("last_seen", ""), 80),
         exception_type=_clip_text(merged.get("exception_type"), 160) or None,
-        summary=_clip_text(payload.get("summary"), 500) or deterministic.summary,
-        evidence=_string_list(payload.get("evidence"), 5) or deterministic.evidence,
+        summary=_grounded_text(payload.get("summary"), deterministic.summary, anchors, 500),
+        evidence=_grounded_list(payload.get("evidence"), deterministic.evidence, anchors, 5),
         recommended_actions=_string_list(payload.get("recommended_actions"), 5) or deterministic.recommended_actions,
         limitations=_string_list(payload.get("limitations"), 5) or deterministic.limitations,
     )
@@ -662,8 +713,9 @@ def _validate_heatmap_card(payload: Dict[str, Any], fallback: Dict[str, Any]) ->
     """Validate one LLM-produced heatmap card."""
     merged = _merge_card_payload(fallback, payload)
     deterministic = _heatmap_card_from_fact(merged)
+    anchors = _card_text_anchors("heatmap", merged)
     return HeatmapCard(
-        title=_clip_text(payload.get("title"), 220) or deterministic.title,
+        title=_grounded_text(payload.get("title"), deterministic.title, anchors, 220),
         severity=_severity_floor(payload.get("severity"), deterministic.severity),
         confidence=_confidence(payload.get("confidence"), deterministic.confidence),
         bucket_start=_clip_text(merged.get("bucket_start", ""), 80),
@@ -672,8 +724,8 @@ def _validate_heatmap_card(payload: Dict[str, Any], fallback: Dict[str, Any]) ->
         hits=_int_value(merged.get("hits")),
         qps=_float_value(merged.get("qps")),
         p95_latency_ms=_optional_float(merged.get("p95_latency_ms")),
-        summary=_clip_text(payload.get("summary"), 500) or deterministic.summary,
-        evidence=_string_list(payload.get("evidence"), 5) or deterministic.evidence,
+        summary=_grounded_text(payload.get("summary"), deterministic.summary, anchors, 500),
+        evidence=_grounded_list(payload.get("evidence"), deterministic.evidence, anchors, 5),
         recommended_actions=_string_list(payload.get("recommended_actions"), 5) or deterministic.recommended_actions,
         limitations=_string_list(payload.get("limitations"), 5) or deterministic.limitations,
     )
@@ -687,8 +739,9 @@ def _validate_traffic_card(payload: Dict[str, Any], fallback: Dict[str, Any]) ->
         if merged.get("anomaly_type") or merged.get("payload")
         else _traffic_card_from_row(merged)
     )
+    anchors = _card_text_anchors("traffic", merged if merged.get("anomaly_type") else merged)
     return TrafficCard(
-        title=_clip_text(payload.get("title"), 220) or deterministic.title,
+        title=_grounded_text(payload.get("title"), deterministic.title, anchors, 220),
         severity=_severity_floor(payload.get("severity"), deterministic.severity),
         confidence=_confidence(payload.get("confidence"), deterministic.confidence),
         pattern_type=_clip_text(merged.get("pattern_type") or merged.get("anomaly_type") or "traffic_pattern", 80),
@@ -698,8 +751,8 @@ def _validate_traffic_card(payload: Dict[str, Any], fallback: Dict[str, Any]) ->
         hits=_int_value(merged.get("hits")),
         unique_ips=_int_value(merged.get("unique_ips")),
         p95_latency_ms=_optional_float(merged.get("p95_latency_ms")),
-        summary=_clip_text(payload.get("summary"), 500) or deterministic.summary,
-        evidence=_string_list(payload.get("evidence"), 5) or deterministic.evidence,
+        summary=_grounded_text(payload.get("summary"), deterministic.summary, anchors, 500),
+        evidence=_grounded_list(payload.get("evidence"), deterministic.evidence, anchors, 5),
         recommended_actions=_string_list(payload.get("recommended_actions"), 5) or deterministic.recommended_actions,
         limitations=_string_list(payload.get("limitations"), 5) or deterministic.limitations,
     )
@@ -816,7 +869,8 @@ def validate_agent_result_payload(
     for index, item in enumerate(cards_payload):
         item = _as_dict(item)
         if input_context.profile == "incidents":
-            fallback = fallback_by_key.get(_clip_text(item.get("cluster_id", ""), 120), {})
+            explicit_key = _clip_text(item.get("card_key") or item.get("cluster_id", ""), 120)
+            fallback = fallback_by_key.get(explicit_key, {})
             if not fallback and index < len(fallback_facts):
                 fallback = fallback_facts[index]
                 positional_fallbacks += 1
@@ -824,10 +878,12 @@ def validate_agent_result_payload(
             missed_fallbacks += 0 if fallback else 1
             cards.append(_validate_incident_card(item, fallback))
         elif input_context.profile == "heatmap":
-            key = "|".join([
-                _clip_text(item.get("bucket_start", ""), 80),
-                _clip_text(item.get("operation", ""), 160),
-            ])
+            key = _clip_text(item.get("card_key"), 320)
+            if not key:
+                key = "|".join([
+                    _clip_text(item.get("bucket_start", ""), 80),
+                    _clip_text(item.get("operation", ""), 160),
+                ])
             fallback = fallback_by_key.get(key, {})
             if not fallback and index < len(fallback_facts):
                 fallback = fallback_facts[index]
@@ -836,11 +892,13 @@ def validate_agent_result_payload(
             missed_fallbacks += 0 if fallback else 1
             cards.append(_validate_heatmap_card(item, fallback))
         elif input_context.profile == "traffic":
-            key = "|".join([
-                _clip_text(item.get("method", ""), 32),
-                _clip_text(item.get("path", ""), 160),
-                str(item.get("http_status")),
-            ])
+            key = _clip_text(item.get("card_key"), 400)
+            if not key:
+                key = "|".join([
+                    _clip_text(item.get("method", ""), 32),
+                    _clip_text(item.get("path", ""), 160),
+                    str(item.get("http_status")),
+                ])
             fallback = fallback_by_key.get(key, {})
             if not fallback and index < len(fallback_facts):
                 fallback = fallback_facts[index]
