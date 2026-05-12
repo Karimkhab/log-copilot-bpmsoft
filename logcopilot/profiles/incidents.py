@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Incident profile: signature clustering and semantic grouping."""
+"""Профиль инцидентов: кластеризация по сигнатурам и семантическая группировка."""
 
 from dataclasses import asdict
 import logging
@@ -18,17 +18,18 @@ logger = logging.getLogger(__name__)
 
 
 def build_quality_summary(events: List[Event], source_name: str, cluster_count: int) -> AnalysisSummary:
-    """Build the quality summary for the incidents profile.
-
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: качества, сводки.
+    
     Args:
-        events: Parsed canonical events for the current run.
-        source_name: Source file name shown in the summary.
-        cluster_count: Number of signature clusters produced for the run.
-
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        source_name (str): Человекочитаемое имя источника, используемое в сводках качества.
+        cluster_count (int): Количество найденных кластеров, учитываемое в итоговой сводке.
+    
     Returns:
-        Aggregated quality summary for the incidents profile.
+        AnalysisSummary: Сводка качества профиля инцидентов с учетом событий, источника и количества кластеров.
     """
     quality = AnalysisQualityAccumulator(source_name=source_name)
+    # Проходим события один раз и одновременно накапливаем агрегаты для отчета.
     for event in events:
         quality.add(event)
     return quality.build_summary(cluster_count=cluster_count)
@@ -46,25 +47,26 @@ def run_incidents_profile(
     semantic_max_signatures: int = 2500,
     progress_callback: Callable[[str], None] | None = None,
 ) -> dict:
-    """Compute the incidents profile result.
-
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: инцидентов, профиля.
+    
     Args:
-        events: Parsed canonical events for the run.
-        output_dir: Compatibility argument retained for existing callers.
-        source_name: Display name for the source log file.
-        semantic: Semantic clustering mode.
-        semantic_model: Sentence-transformer model name for embeddings.
-        semantic_min_cluster_size: Minimum size for a semantic cluster.
-        semantic_min_samples: Minimum density threshold for semantic clustering.
-        semantic_cache_dir: Optional cache directory for embedding vectors.
-        semantic_max_signatures: Maximum number of representative signatures to embed.
-        progress_callback: Optional callback for progress messages.
-
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        output_dir (Path): Директория, в которой создаются артефакты текущего запуска.
+        source_name (str): Человекочитаемое имя источника, используемое в сводках качества.
+        semantic (str, optional): Значение `semantic`, используемое функцией при выполнении операции.
+        semantic_model (str, optional): Значение `semantic_model`, используемое функцией при выполнении операции.
+        semantic_min_cluster_size (int, optional): Значение `semantic_min_cluster_size`, используемое функцией при выполнении операции.
+        semantic_min_samples (Optional[int], optional): Значение `semantic_min_samples`, используемое функцией при выполнении операции.
+        semantic_cache_dir (Optional[Path], optional): Директория кэша, где хранятся эмбеддинги и вспомогательные файлы.
+        semantic_max_signatures (int, optional): Значение `semantic_max_signatures`, используемое функцией при выполнении операции.
+        progress_callback (Callable[[str], None] | None, optional): Значение `progress_callback`, используемое функцией при выполнении операции.
+    
     Returns:
-        Profile payload with clusters, summaries and compact metadata.
+        dict: Полезная нагрузка профиля инцидентов: кластеры, top-кластеры, семантические группы, summary и analysis_summary.
     """
     del output_dir
     accumulator = ClusterAccumulator()
+    # Проходим события один раз и одновременно накапливаем агрегаты для отчета.
     for event in events:
         accumulator.add(event)
 

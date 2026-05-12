@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Pipeline stage entrypoint for profile computation."""
+"""Точка входа этапа конвейера для вычисления профиля."""
 
 import logging
 import time
@@ -14,13 +14,30 @@ logger = logging.getLogger(__name__)
 
 
 def _print_phase(message: str) -> None:
-    """Emit one user-visible phase message and mirror it to structured logs."""
+    """Выполняет вспомогательную операцию для логики проекта.
+
+    Args:
+        message (str): Значение `message`, используемое функцией при выполнении операции.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     logger.info("run_phase: %s", message)
     print(f"[logcopilot] {message}")
 
 
 def run_profile_computation(context: PipelineContext) -> PipelineContext:
-    """Compute the selected profile result without writing artifacts or storage rows."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: профиля.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_profile_computation`.
+    
+    Raises:
+        ValueError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     profile = context.config.profile
     events = context.events
     profile_started = time.perf_counter()

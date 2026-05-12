@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Signature and embedding text builders for log events."""
+"""Построители сигнатур и текстов для эмбеддингов по событиям логов."""
 
 import hashlib
 import re
@@ -18,13 +18,13 @@ INCIDENT_KEYWORD_RE = re.compile(
 
 
 def extract_exception_type(*chunks: str) -> Optional[str]:
-    """Extract an exception or error type name from text fragments.
-
+    """Извлекает из входных данных значимые признаки или идентификаторы.
+    
     Args:
-        *chunks: Candidate text chunks such as message and stacktrace.
-
+        *chunks (str): Значение `chunks`, используемое функцией при выполнении операции.
+    
     Returns:
-        First matched exception type, or `None`.
+        Optional[str]: Имя первого найденного класса исключения или ошибки; None, если такие признаки отсутствуют.
     """
     for chunk in chunks:
         if not chunk:
@@ -36,14 +36,14 @@ def extract_exception_type(*chunks: str) -> Optional[str]:
 
 
 def extract_stack_frames(stacktrace: str, top_n: int = 3) -> List[str]:
-    """Extract the top stack frames from a stacktrace string.
-
+    """Извлекает из входных данных значимые признаки или идентификаторы.
+    
     Args:
-        stacktrace: Raw stacktrace text.
-        top_n: Maximum number of frames to keep.
-
+        stacktrace (str): Значение `stacktrace`, используемое функцией при выполнении операции.
+        top_n (int, optional): Количество наиболее значимых элементов, которые нужно включить в результат.
+    
     Returns:
-        Normalized top stack frames.
+        List[str]: До `top_n` верхних стек-фреймов, очищенных от лишних пробелов и служебных суффиксов.
     """
     frames: List[str] = []
     for line in (stacktrace or "").splitlines():
@@ -63,15 +63,15 @@ def build_signature(
     exception_type: Optional[str],
     stack_frames: List[str],
 ) -> str:
-    """Build a stable signature hash for a normalized event.
-
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки.
+    
     Args:
-        normalized_message: Normalized event message.
-        exception_type: Extracted exception type, if any.
-        stack_frames: Extracted top stack frames.
-
+        normalized_message (str): Значение `normalized_message`, используемое функцией при выполнении операции.
+        exception_type (Optional[str]): Значение `exception_type`, используемое функцией при выполнении операции.
+        stack_frames (List[str]): Значение `stack_frames`, используемое функцией при выполнении операции.
+    
     Returns:
-        SHA-1 signature hash.
+        str: SHA1-хеш сигнатуры, построенный из нормализованного сообщения, типа исключения и верхних stack frames.
     """
     payload = "||".join(
         [normalized_message or "", exception_type or "", *stack_frames]
@@ -80,14 +80,14 @@ def build_signature(
 
 
 def is_incident_candidate(event: RawEvent, exception_type: Optional[str]) -> bool:
-    """Decide whether a raw event should be treated as incident-like.
-
+    """Проверяет условие и возвращает логический результат. Область применения: инцидента.
+    
     Args:
-        event: Raw parsed event.
-        exception_type: Extracted exception type, if any.
-
+        event (RawEvent): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
+        exception_type (Optional[str]): Значение `exception_type`, используемое функцией при выполнении операции.
+    
     Returns:
-        `True` when the event has incident characteristics.
+        bool: True, если событие похоже на инцидент по уровню, исключению, stacktrace, HTTP 5xx или ключевым словам.
     """
     level = (event.level or "").upper()
     if level in {"ERROR", "FATAL"}:
@@ -106,14 +106,14 @@ def is_incident_candidate(event: RawEvent, exception_type: Optional[str]) -> boo
 def make_event_signature(
     event: RawEvent, normalization_stats: Optional[NormalizationStats] = None
 ) -> tuple[str, Optional[str], List[str], bool]:
-    """Build signature ingredients for a raw event.
-
+    """Создает значение на основе входных данных и возвращает его вызывающему коду. Область применения: события.
+    
     Args:
-        event: Raw parsed event.
-        normalization_stats: Optional normalization stats accumulator.
-
+        event (RawEvent): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
+        normalization_stats (Optional[NormalizationStats], optional): Объект статистики нормализации, куда записываются сведения о масках.
+    
     Returns:
-        Tuple of normalized message, exception type, stack frames and incident flag.
+        tuple[str, Optional[str], List[str], bool]: Нормализованное сообщение, тип исключения, верхние stack frames и признак инцидента.
     """
     normalized_message = normalize_text(event.message, normalization_stats)
     exception_type = extract_exception_type(event.stacktrace, event.message)
@@ -123,13 +123,13 @@ def make_event_signature(
 
 
 def build_embedding_text(event: Event) -> str:
-    """Build embedding text used by semantic clustering models.
-
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки.
+    
     Args:
-        event: Canonical event to describe.
-
+        event (Event): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
+    
     Returns:
-        Concise text representation for semantic embeddings.
+        str: Текст для эмбеддинга с профилем парсера, уровнем, компонентом, сообщением и важными техническими признаками.
     """
     parts = [
         f"profile={event.parser_profile}",
@@ -160,15 +160,15 @@ def build_signature_text(
     exception_type: Optional[str],
     stack_frames: List[str],
 ) -> str:
-    """Build a readable signature text description for reports and storage.
-
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки.
+    
     Args:
-        normalized_message: Normalized event message.
-        exception_type: Extracted exception type, if any.
-        stack_frames: Extracted top stack frames.
-
+        normalized_message (str): Значение `normalized_message`, используемое функцией при выполнении операции.
+        exception_type (Optional[str]): Значение `exception_type`, используемое функцией при выполнении операции.
+        stack_frames (List[str]): Значение `stack_frames`, используемое функцией при выполнении операции.
+    
     Returns:
-        Human-readable signature descriptor string.
+        str: Человекочитаемый текст сигнатуры из нормализованного сообщения, исключения и верхних stack frames.
     """
     parts = [f"normalized_message={normalized_message}"]
     if exception_type:

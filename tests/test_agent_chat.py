@@ -13,6 +13,14 @@ from logcopilot.pipeline import run_pipeline
 
 class AgentStructuredLayerTests(unittest.TestCase):
     def test_pipeline_agent_result_is_structured_not_chat_like(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: конвейера, агентского этапа.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = """2026-03-11 08:20:00 INFO Gateway - GET /api/orders status=500 latency=1200ms size=32 ip=10.0.0.1
 2026-03-11 08:20:10 INFO Gateway - GET /api/orders status=500 latency=1500ms size=33 ip=10.0.0.2
 """
@@ -43,6 +51,14 @@ class AgentStructuredLayerTests(unittest.TestCase):
             self.assertTrue((Path(result.output_dir) / "findings.json").exists())
 
     def test_public_output_is_compact_and_agent_context_is_not_persisted(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: агентского этапа.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = """2026-03-11 08:20:49,617 [1] ERROR Host Start - Startup exception|System.Security.SecurityException: Login failed
    at Foo.Bar()
 2026-03-11 08:20:50,000 ERROR Host Start - Startup exception|System.Security.SecurityException: Login failed
@@ -71,6 +87,14 @@ class AgentStructuredLayerTests(unittest.TestCase):
             self.assertFalse((Path(result.output_dir) / "agent_input_context.json").exists())
 
     def test_structured_llm_payload_validates_to_profile_cards(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: полезной нагрузки, профиля, карточек.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         input_context = AgentInputContext(
             profile="incidents",
             run_id="r1",
@@ -167,6 +191,14 @@ class AgentStructuredLayerTests(unittest.TestCase):
         self.assertIn("hits=12", result.cards[0].evidence[0])
 
     def test_yandex_config_reads_yc_dotenv_values(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: конфигурации.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / ".env").write_text(
@@ -188,6 +220,14 @@ class AgentStructuredLayerTests(unittest.TestCase):
         self.assertTrue(provider_is_configured(config))
 
     def test_yandex_without_required_config_uses_deterministic_fallback(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: конфигурации, резервного сценария.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = "2026-03-11 08:20:00 INFO Gateway - GET /api/orders status=500 latency=1200ms size=32 ip=10.0.0.1\n"
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

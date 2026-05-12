@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Pipeline stage entrypoint for canonical event building."""
+"""Точка входа этапа конвейера для построения канонических событий."""
 
 import logging
 import time
@@ -13,13 +13,30 @@ logger = logging.getLogger(__name__)
 
 
 def _print_phase(message: str) -> None:
-    """Emit one user-visible phase message and mirror it to structured logs."""
+    """Выполняет вспомогательную операцию для логики проекта.
+
+    Args:
+        message (str): Значение `message`, используемое функцией при выполнении операции.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     logger.info("run_phase: %s", message)
     print(f"[logcopilot] {message}")
 
 
 def run_event_building(context: PipelineContext) -> PipelineContext:
-    """Build normalized canonical events from parsed records."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: события.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_event_building`.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if context.parse_result is None:
         raise RuntimeError("Parsing must run before event building.")
 

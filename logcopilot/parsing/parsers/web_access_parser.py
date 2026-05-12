@@ -23,6 +23,14 @@ LATENCY_PATTERNS = (
 
 
 def parse_access_timestamp(value: str) -> datetime | None:
+    """Разбирает входные данные и преобразует их в структурированный результат. Область применения: access-лога, временной метки.
+    
+    Args:
+        value (str): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        datetime | None: Временная метка access-лога; None, если дата не распознана.
+    """
     for fmt in ACCESS_TIME_FORMATS:
         try:
             return datetime.strptime(value, fmt)
@@ -32,6 +40,14 @@ def parse_access_timestamp(value: str) -> datetime | None:
 
 
 def parse_latency_ms(tail: str) -> float | None:
+    """Разбирает входные данные и преобразует их в структурированный результат. Область применения: задержки.
+    
+    Args:
+        tail (str): Значение `tail`, используемое функцией при выполнении операции.
+    
+    Returns:
+        float | None: Задержка запроса в миллисекундах; None, если хвост строки не содержит числовой задержки.
+    """
     for index, pattern in enumerate(LATENCY_PATTERNS):
         match = pattern.search(tail)
         if match:
@@ -45,11 +61,19 @@ def parse_latency_ms(tail: str) -> float | None:
 
 
 class WebAccessParser(BaseParser):
-    """Parser for common or combined access-log style lines."""
+    """Парсер строк в стиле common или combined access-log."""
 
     name = "web_access"
 
     def can_parse(self, sample: str) -> float:
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            sample (str): Образец текста лога, по которому оценивается применимость парсера.
+
+        Returns:
+            float: Оценка уверенности от 0.0 до 1.0, показывающая насколько парсер подходит для текста.
+        """
         lines = [line for line in sample.splitlines() if line.strip()]
         if not lines:
             return 0.0
@@ -57,6 +81,15 @@ class WebAccessParser(BaseParser):
         return matched / len(lines)
 
     def parse(self, text: str, source: str | None = None):
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            text (str): Текстовое содержимое лога или фрагмент строки, которое анализируется функцией.
+            source (str | None, optional): Имя источника или файла, из которого получена запись лога.
+
+        Returns:
+            ParseResult: Результат парсинга с событиями, диагностикой и предупреждениями.
+        """
         events: list[CanonicalEvent] = []
         warnings: list[str] = []
         fallback_events = 0

@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 @dataclass
 class CanonicalEvent:
-    """Canonical representation produced by the parsing subsystem."""
+    """Каноническое представление, создаваемое подсистемой парсинга."""
 
     timestamp: Optional[datetime]
     level: Optional[str]
@@ -33,7 +33,7 @@ class CanonicalEvent:
 
 @dataclass
 class ParseResult:
-    """Structured output from a parser implementation."""
+    """Структурированный результат реализации парсера."""
 
     events: List[CanonicalEvent]
     parser_name: str
@@ -44,7 +44,7 @@ class ParseResult:
 
 @dataclass
 class ParserSelection:
-    """Result of detector-driven parser selection."""
+    """Результат выбора парсера на основе детектора."""
 
     parser_name: str
     confidence: float

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Typed contracts for the current pipeline orchestration path."""
+"""Типизированные контракты для текущей оркестрации конвейера."""
 
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class PipelineConfig:
-    """Immutable configuration for one pipeline run."""
+    """Неизменяемая конфигурация одного запуска конвейера."""
 
     input_path: Path
     profile: str = "incidents"
@@ -31,6 +31,17 @@ class PipelineConfig:
     agent_provider: str = "none"
 
     def __post_init__(self) -> None:
+        """Выполняет дополнительную проверку и нормализацию объекта после создания dataclass.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+
+        Raises:
+            ValueError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+        """
         object.__setattr__(self, "input_path", Path(self.input_path).expanduser())
         agent = self.agent.lower()
         agent_provider = self.agent_provider.lower()
@@ -44,7 +55,7 @@ class PipelineConfig:
 
 @dataclass
 class ParsedLogRecord:
-    """Parsed canonical log record with its pipeline source label."""
+    """Разобранная каноническая запись лога с меткой источника конвейера."""
 
     source_file: str
     event: CanonicalEvent
@@ -52,7 +63,7 @@ class ParsedLogRecord:
 
 @dataclass
 class ParseFileDiagnostics:
-    """Parser diagnostics for one source file in a pipeline run."""
+    """Диагностика парсера для одного исходного файла в запуске конвейера."""
 
     source_file: str
     parser_name: str
@@ -61,7 +72,14 @@ class ParseFileDiagnostics:
     warnings: List[str] = field(default_factory=list)
 
     def as_dict(self) -> Dict[str, Any]:
-        """Return the legacy diagnostics payload shape."""
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            dict: Словарь с полями объекта, пригодный для сериализации и записи в артефакты.
+        """
         return {
             "source_file": self.source_file,
             "parser_name": self.parser_name,
@@ -73,7 +91,7 @@ class ParseFileDiagnostics:
 
 @dataclass
 class ParseStageResult:
-    """Typed result produced by the parse-only stage."""
+    """Типизированный результат этапа, который только парсит логи."""
 
     parsed_records: List[ParsedLogRecord] = field(default_factory=list)
     file_results: List[ParseFileDiagnostics] = field(default_factory=list)
@@ -84,7 +102,7 @@ class ParseStageResult:
 
 @dataclass
 class EventBuildStageResult:
-    """Typed result produced by the event-building stage."""
+    """Типизированный результат этапа построения событий."""
 
     events: List[Event] = field(default_factory=list)
     event_count: int = 0
@@ -94,7 +112,7 @@ class EventBuildStageResult:
 
 @dataclass
 class StoreEventsStageResult:
-    """Typed result produced by the event storage stage."""
+    """Типизированный результат этапа сохранения событий."""
 
     stored_event_count: int = 0
     duration_seconds: float = 0.0
@@ -102,7 +120,7 @@ class StoreEventsStageResult:
 
 @dataclass
 class ProfileStageResult:
-    """Typed wrapper around the current profile payload dictionary."""
+    """Типизированная обертка над словарем полезной нагрузки профиля."""
 
     profile: str
     payload: Dict[str, Any]
@@ -110,18 +128,32 @@ class ProfileStageResult:
 
     @property
     def artifact_paths(self) -> Dict[str, str]:
-        """Profile artifact paths in the legacy payload shape."""
+        """Выполняет вспомогательную операцию для артефакта.
+        
+        Args:
+            Нет параметров.
+        
+        Returns:
+            Dict[str, str]: Словарь имен артефактов и их путей, извлеченный из полезной нагрузки профиля.
+        """
         return self.payload.setdefault("artifact_paths", {})
 
     @property
     def summary(self) -> Dict[str, Any]:
-        """Profile summary in the legacy payload shape."""
+        """Выполняет вспомогательную операцию для сводки.
+        
+        Args:
+            Нет параметров.
+        
+        Returns:
+            Dict[str, Any]: Сводная часть полезной нагрузки профиля без служебных артефактов и детальных списков.
+        """
         return self.payload["summary"]
 
 
 @dataclass
 class AgentInputContext:
-    """Compact, deterministic facts passed to the optional pipeline agent."""
+    """Компактные детерминированные факты для агентского этапа конвейера."""
 
     profile: str
     run_id: str
@@ -133,7 +165,14 @@ class AgentInputContext:
     requested_focus: Optional[str] = None
 
     def as_dict(self) -> Dict[str, Any]:
-        """Return a JSON-ready compact input payload."""
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            dict: Словарь с полями объекта, пригодный для сериализации и записи в артефакты.
+        """
         payload = asdict(self)
         if self.requested_focus is None:
             payload.pop("requested_focus", None)
@@ -142,7 +181,7 @@ class AgentInputContext:
 
 @dataclass
 class IncidentCard:
-    """Structured incident interpretation card for one important cluster."""
+    """Структурированная карточка интерпретации инцидента для важного кластера."""
 
     title: str = ""
     severity: str = "medium"
@@ -160,13 +199,20 @@ class IncidentCard:
     card_type: str = field(default="incident", init=False)
 
     def as_dict(self) -> Dict[str, Any]:
-        """Return a JSON-ready incident card."""
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            dict: Словарь с полями объекта, пригодный для сериализации и записи в артефакты.
+        """
         return asdict(self)
 
 
 @dataclass
 class HeatmapCard:
-    """Structured heatmap interpretation card for one hotspot."""
+    """Структурированная карточка интерпретации тепловой карты для горячей точки."""
 
     title: str = ""
     severity: str = "medium"
@@ -184,13 +230,20 @@ class HeatmapCard:
     card_type: str = field(default="heatmap", init=False)
 
     def as_dict(self) -> Dict[str, Any]:
-        """Return a JSON-ready heatmap card."""
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            dict: Словарь с полями объекта, пригодный для сериализации и записи в артефакты.
+        """
         return asdict(self)
 
 
 @dataclass
 class TrafficCard:
-    """Structured traffic interpretation card for one anomaly or endpoint pattern."""
+    """Структурированная карточка интерпретации трафика для аномалии или шаблона эндпоинта."""
 
     title: str = ""
     severity: str = "medium"
@@ -209,7 +262,14 @@ class TrafficCard:
     card_type: str = field(default="traffic", init=False)
 
     def as_dict(self) -> Dict[str, Any]:
-        """Return a JSON-ready traffic card."""
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            dict: Словарь с полями объекта, пригодный для сериализации и записи в артефакты.
+        """
         return asdict(self)
 
 
@@ -218,7 +278,7 @@ AgentCard = Union[IncidentCard, HeatmapCard, TrafficCard]
 
 @dataclass
 class AgentResult:
-    """Structured interpretation produced by the mandatory pipeline agent stage."""
+    """Структурированная интерпретация, создаваемая обязательным агентским этапом конвейера."""
 
     enabled: bool
     status: str
@@ -244,7 +304,14 @@ class AgentResult:
     error: Optional[str] = None
 
     def as_dict(self) -> Dict[str, Any]:
-        """Return a JSON-ready payload for storage and output artifacts."""
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            dict: Словарь с полями объекта, пригодный для сериализации и записи в артефакты.
+        """
         payload: Dict[str, Any] = {
             "enabled": self.enabled,
             "status": self.status,
@@ -275,7 +342,7 @@ class AgentResult:
 
 @dataclass
 class PipelineContext:
-    """Mutable state passed through the current pipeline stages."""
+    """Изменяемое состояние, передаваемое между этапами текущего конвейера."""
 
     config: PipelineConfig
     input_path: Path

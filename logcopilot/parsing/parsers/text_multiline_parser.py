@@ -47,6 +47,14 @@ class ParsedFirstLine:
 
 
 def parse_first_line(line: str) -> ParsedFirstLine | None:
+    """Разбирает входные данные и преобразует их в структурированный результат.
+    
+    Args:
+        line (str): Одна строка лога, которую нужно разобрать или проверить.
+    
+    Returns:
+        ParsedFirstLine | None: Разобранные поля первой строки многострочного события; None, если строка не является началом события.
+    """
     stripped = line.rstrip()
     for pattern in START_PATTERNS:
         match = pattern.match(stripped)
@@ -76,6 +84,14 @@ def parse_first_line(line: str) -> ParsedFirstLine | None:
 
 
 def is_start_line(line: str) -> bool:
+    """Проверяет условие и возвращает логический результат.
+    
+    Args:
+        line (str): Одна строка лога, которую нужно разобрать или проверить.
+    
+    Returns:
+        bool: True, если строка похожа на начало нового многострочного события.
+    """
     if not line.strip():
         return False
     if STACK_CONTINUATION_RE.match(line):
@@ -89,11 +105,19 @@ def is_start_line(line: str) -> bool:
 
 
 class TextMultilineParser(BaseParser):
-    """Parser for Java/.NET/plain text logs with multiline events."""
+    """Парсер Java/.NET/обычных текстовых логов с многострочными событиями."""
 
     name = "text_multiline"
 
     def can_parse(self, sample: str) -> float:
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            sample (str): Образец текста лога, по которому оценивается применимость парсера.
+
+        Returns:
+            float: Оценка уверенности от 0.0 до 1.0, показывающая насколько парсер подходит для текста.
+        """
         lines = [line for line in sample.splitlines() if line.strip()]
         if not lines:
             return 0.0
@@ -102,12 +126,29 @@ class TextMultilineParser(BaseParser):
         return min(1.0, (starts / len(lines)) + min(0.2, continuations / max(len(lines), 1)))
 
     def parse(self, text: str, source: str | None = None):
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            text (str): Текстовое содержимое лога или фрагмент строки, которое анализируется функцией.
+            source (str | None, optional): Имя источника или файла, из которого получена запись лога.
+
+        Returns:
+            ParseResult: Результат парсинга с событиями, диагностикой и предупреждениями.
+        """
         events: list[CanonicalEvent] = []
         warnings: list[str] = []
         lines = text.splitlines()
         buffer: list[str] = []
 
         def flush_buffer() -> None:
+            """Выполняет вспомогательную операцию для логики проекта.
+
+            Args:
+                Нет параметров.
+
+            Returns:
+                None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+            """
             if not buffer:
                 return
             raw_text = "\n".join(buffer).strip()

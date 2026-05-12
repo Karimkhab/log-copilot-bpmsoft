@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Pipeline execution quality validation."""
+"""Валидация качества выполнения конвейера."""
 
 from typing import Any, Dict, List
 
@@ -8,12 +8,27 @@ from ..domain import ExecutionQuality, PipelineContext
 
 
 def _dict(value: Any) -> Dict[str, Any]:
-    """Return a mapping value or an empty mapping."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        Dict[str, Any]: Копия входного словаря или пустой словарь, если значение не является mapping.
+    """
     return dict(value) if isinstance(value, dict) else {}
 
 
 def _float(value: Any, default: float = 0.0) -> float:
-    """Coerce a value to float with a safe fallback."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+        default (float, optional): Значение по умолчанию, возвращаемое при невозможности корректного преобразования.
+    
+    Returns:
+        float: value, приведенное к float; default, если значение отсутствует или не является числом.
+    """
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -21,12 +36,26 @@ def _float(value: Any, default: float = 0.0) -> float:
 
 
 def _label(value: Any) -> str:
-    """Normalize a label-like value."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        str: Текстовая метка качества или уверенности для рассчитанного числового значения.
+    """
     return str(value or "").lower()
 
 
 def _missing_card_sections(cards: List[Any]) -> Dict[str, int]:
-    """Count cards missing product-facing sections."""
+    """Выполняет вспомогательную операцию для карточки.
+    
+    Args:
+        cards (List[Any]): Список карточек выводов, из которых формируется публичный результат.
+    
+    Returns:
+        Dict[str, int]: Количество карточек с пустыми обязательными разделами: summary, evidence и recommended_actions.
+    """
     return {
         "empty_summary": sum(1 for card in cards if not getattr(card, "summary", "")),
         "empty_evidence": sum(1 for card in cards if not getattr(card, "evidence", [])),
@@ -40,14 +69,31 @@ def _add_reason(
     reason: str,
     recommendation: str,
 ) -> None:
-    """Append one reason and recommendation pair."""
+    """Выполняет вспомогательную операцию для логики проекта.
+
+    Args:
+        reasons (List[str]): Значение `reasons`, используемое функцией при выполнении операции.
+        recommendations (List[str]): Значение `recommendations`, используемое функцией при выполнении операции.
+        reason (str): Значение `reason`, используемое функцией при выполнении операции.
+        recommendation (str): Значение `recommendation`, используемое функцией при выполнении операции.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     reasons.append(reason)
     if recommendation not in recommendations:
         recommendations.append(recommendation)
 
 
 def run_quality_validation(context: PipelineContext) -> PipelineContext:
-    """Validate whether the pipeline output is trustworthy and useful."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: качества, валидации.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_quality_validation`.
+    """
     run_summary = _dict(context.run_summary)
     parser_diagnostics = _dict(run_summary.get("parser_diagnostics"))
     parse_quality = _dict(parser_diagnostics.get("parse_quality"))

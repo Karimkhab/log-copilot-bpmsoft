@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""LogCopilot public package API."""
+"""Публичный API пакета LogCopilot."""
 
 __all__ = ["__version__", "PipelineConfig", "RunResult", "run_batch_pipeline", "run_pipeline"]
 
@@ -8,7 +8,17 @@ __version__ = "0.1.0"
 
 
 def __getattr__(name: str):
-    """Load public API objects lazily to keep module execution clean."""
+    """Лениво возвращает публичный атрибут модуля, сохраняя совместимость импортов.
+    
+    Args:
+        name (str): Имя переменной, поля, провайдера или ресурса, значение которого обрабатывается.
+    
+    Returns:
+        Any: Публичный объект пакета, загруженный лениво по имени, например функция запуска конвейера или доменная модель.
+    
+    Raises:
+        AttributeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if name == "run_pipeline":
         from .pipeline import run_pipeline
 

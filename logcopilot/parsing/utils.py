@@ -52,10 +52,28 @@ LOGFMT_RE = re.compile(r"(?P<key>[\w.@/-]+)=(?P<value>\"(?:\\.|[^\"])*\"|'(?:\\.
 
 
 def clamp_confidence(value: float, minimum: float = 0.0, maximum: float = 1.0) -> float:
+    """Ограничивает числовое значение заданными границами. Область применения: уверенности.
+    
+    Args:
+        value (float): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+        minimum (float, optional): Нижняя допустимая граница значения.
+        maximum (float, optional): Верхняя допустимая граница значения.
+    
+    Returns:
+        float: Значение уверенности, ограниченное переданными нижней и верхней границами.
+    """
     return max(minimum, min(maximum, value))
 
 
 def parse_timestamp(value: Any) -> Optional[datetime]:
+    """Разбирает входные данные и преобразует их в структурированный результат. Область применения: временной метки.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        Optional[datetime]: Распознанная временная метка; None, если значение пустое или не подходит ни под один поддерживаемый формат.
+    """
     if value in (None, ""):
         return None
     if isinstance(value, datetime):
@@ -64,6 +82,7 @@ def parse_timestamp(value: Any) -> Optional[datetime]:
     if not text:
         return None
     normalized = text.replace(",", ".", 1) if "," in text and "T" in text else text
+    # Перебираем несколько распространенных форматов времени, потому что логи разных систем пишут дату по-разному.
     for fmt in TIMESTAMP_FORMATS:
         try:
             return datetime.strptime(text, fmt)
@@ -82,6 +101,14 @@ def parse_timestamp(value: Any) -> Optional[datetime]:
 
 
 def normalize_level(value: Any) -> Optional[str]:
+    """Нормализует входное значение к каноническому виду, удобному для сравнения и агрегации. Область применения: уровня логирования.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        Optional[str]: Канонический уровень логирования (`INFO`, `WARN`, `ERROR` и т.п.) или None для пустого/некорректного значения.
+    """
     if value in (None, ""):
         return None
     text = str(value).strip().upper()
@@ -89,6 +116,14 @@ def normalize_level(value: Any) -> Optional[str]:
 
 
 def parse_float(value: Any) -> Optional[float]:
+    """Разбирает входные данные и преобразует их в структурированный результат.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        Optional[float]: Число с плавающей точкой или None, если значение пустое либо не является числом.
+    """
     if value in (None, ""):
         return None
     try:
@@ -98,6 +133,14 @@ def parse_float(value: Any) -> Optional[float]:
 
 
 def parse_int(value: Any) -> Optional[int]:
+    """Разбирает входные данные и преобразует их в структурированный результат.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        Optional[int]: Целое число или None, если значение пустое либо не является целым числом.
+    """
     if value in (None, ""):
         return None
     try:
@@ -107,23 +150,57 @@ def parse_int(value: Any) -> Optional[int]:
 
 
 def strip_quotes(value: str) -> str:
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (str): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        str: Исходная строка без одинаковых внешних кавычек; если кавычек нет, строка возвращается без изменений.
+    """
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
         return value[1:-1]
     return value
 
 
 def read_detection_sample(text: str, max_lines: int = 40) -> str:
+    """Читает входные данные и возвращает подготовленное представление для дальнейшей обработки.
+    
+    Args:
+        text (str): Текстовое содержимое лога или фрагмент строки, которое анализируется функцией.
+        max_lines (int, optional): Максимальное число строк, которое берется из входного текста.
+    
+    Returns:
+        str: Первые `max_lines` строк текста, объединенные обратно в строку для детектора парсера.
+    """
     return "\n".join(text.splitlines()[:max_lines])
 
 
 def parse_logfmt_pairs(line: str) -> dict[str, str]:
+    """Разбирает входные данные и преобразует их в структурированный результат.
+    
+    Args:
+        line (str): Одна строка лога, которую нужно разобрать или проверить.
+    
+    Returns:
+        dict[str, str]: Словарь logfmt-пар `ключ -> значение` с удаленными внешними кавычками.
+    """
     result: dict[str, str] = {}
+    # Регулярное выражение учитывает кавычки, поэтому значения с пробелами не дробятся на отдельные пары.
     for match in LOGFMT_RE.finditer(line):
         result[match.group("key")] = strip_quotes(match.group("value"))
     return result
 
 
 def coerce_latency_ms(value: Any) -> Optional[float]:
+    """Преобразует значение к ожидаемому типу с учетом допустимых нестрогих форматов. Область применения: задержки.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        Optional[float]: Задержка в миллисекундах; секунды переводятся в миллисекунды, неподходящие значения дают None.
+    """
     if value in (None, ""):
         return None
     if isinstance(value, (int, float)):
@@ -140,6 +217,15 @@ def coerce_latency_ms(value: Any) -> Optional[float]:
 
 
 def first_present(mapping: Mapping[str, Any], *keys: str) -> Any:
+    """Возвращает первое подходящее значение из набора кандидатов.
+    
+    Args:
+        mapping (Mapping[str, Any]): Словарь или отображение, из которого извлекаются значения по набору ключей.
+        *keys (str): Значение `keys`, используемое функцией при выполнении операции.
+    
+    Returns:
+        Any: Значение первого найденного ключа без учета регистра; None, если ни один ключ отсутствует.
+    """
     lowered = {str(key).lower(): value for key, value in mapping.items()}
     for key in keys:
         if key.lower() in lowered:
@@ -148,6 +234,14 @@ def first_present(mapping: Mapping[str, Any], *keys: str) -> Any:
 
 
 def extract_ids(text: str) -> tuple[Optional[str], Optional[str]]:
+    """Извлекает из входных данных значимые признаки или идентификаторы.
+    
+    Args:
+        text (str): Текстовое содержимое лога или фрагмент строки, которое анализируется функцией.
+    
+    Returns:
+        tuple[Optional[str], Optional[str]]: Пара `(request_id, trace_id)`, извлеченная из текста; элементы могут быть None.
+    """
     request_match = REQUEST_ID_RE.search(text)
     trace_match = TRACE_ID_RE.search(text)
     request_id = request_match.group("value") if request_match else None
@@ -156,6 +250,14 @@ def extract_ids(text: str) -> tuple[Optional[str], Optional[str]]:
 
 
 def extract_http_tokens(text: str) -> dict[str, Any]:
+    """Извлекает из входных данных значимые признаки или идентификаторы.
+    
+    Args:
+        text (str): Текстовое содержимое лога или фрагмент строки, которое анализируется функцией.
+    
+    Returns:
+        dict[str, Any]: HTTP-признаки из текста: метод, путь, статус, задержка, размер ответа и IP клиента.
+    """
     method = None
     path = None
     status = None
@@ -195,6 +297,14 @@ def extract_http_tokens(text: str) -> dict[str, Any]:
 
 
 def stringify(value: Any) -> str:
+    """Преобразует значение произвольного типа в строку для сохранения или анализа.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        str: Строковое представление значения: списки объединяются строками, словари сериализуются в JSON.
+    """
     if value is None:
         return ""
     if isinstance(value, str):
@@ -217,6 +327,21 @@ def build_event_from_mapping(
     default_message: str | None = None,
     default_component: str | None = None,
 ) -> CanonicalEvent:
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: события.
+    
+    Args:
+        payload (Mapping[str, Any]): Словарь с исходными или уже подготовленными данными для преобразования.
+        raw_text (str): Исходный текст записи лога, сохраняемый для диагностики и повторного анализа.
+        parser_name (str): Имя парсера, которым была обработана запись.
+        parser_confidence (float): Оценка уверенности парсера в корректности разбора записи.
+        source (str | None): Имя источника или файла, из которого получена запись лога.
+        line_count (int, optional): Количество строк, входящих в одну логическую запись лога.
+        default_message (str | None, optional): Сообщение по умолчанию, используемое если его нельзя извлечь из данных.
+        default_component (str | None, optional): Компонент по умолчанию, используемый если он отсутствует во входных данных.
+    
+    Returns:
+        CanonicalEvent: Каноническое событие, собранное из словаря лога, исходного текста и извлеченных HTTP/trace-признаков.
+    """
     request_id, trace_id = extract_ids(raw_text)
     http_tokens = extract_http_tokens(raw_text)
     timestamp = parse_timestamp(
@@ -243,6 +368,7 @@ def build_event_from_mapping(
     client_ip = stringify(first_present(payload, "client_ip", "ip", "remote_ip", "c-ip")) or http_tokens["client_ip"]
     user_agent = stringify(first_present(payload, "user_agent", "user-agent", "ua", "agent"))
 
+    # Все распознанные поля исключаем из attributes, чтобы в дополнительной нагрузке остались только исходные нестандартные данные.
     known_keys = {
         "@timestamp",
         "timestamp",
@@ -344,6 +470,19 @@ def build_generic_event(
     line_count: int = 1,
     default_component: str | None = None,
 ) -> CanonicalEvent:
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: события.
+    
+    Args:
+        raw_text (str): Исходный текст записи лога, сохраняемый для диагностики и повторного анализа.
+        parser_name (str): Имя парсера, которым была обработана запись.
+        parser_confidence (float): Оценка уверенности парсера в корректности разбора записи.
+        source (str | None): Имя источника или файла, из которого получена запись лога.
+        line_count (int, optional): Количество строк, входящих в одну логическую запись лога.
+        default_component (str | None, optional): Компонент по умолчанию, используемый если он отсутствует во входных данных.
+    
+    Returns:
+        CanonicalEvent: Каноническое событие с минимальной структурой, построенное из произвольного текстового сообщения.
+    """
     request_id, trace_id = extract_ids(raw_text)
     http_tokens = extract_http_tokens(raw_text)
     return CanonicalEvent(
@@ -378,6 +517,19 @@ def summarize_parse_result(
     fallback_events: int = 0,
     confidence_cap: float = 1.0,
 ) -> ParseResult:
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        parser_name (str): Имя парсера, которым была обработана запись.
+        events (list[CanonicalEvent]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        total_lines (int): Список строк лога, обрабатываемых функцией.
+        warnings (Optional[list[str]], optional): Значение `warnings`, используемое функцией при выполнении операции.
+        fallback_events (int, optional): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        confidence_cap (float, optional): Значение `confidence_cap`, используемое функцией при выполнении операции.
+    
+    Returns:
+        ParseResult: Итог парсинга с событиями, общей уверенностью, статистикой строк, предупреждениями и fallback-счетчиком.
+    """
     warnings = list(warnings or [])
     total_events = len(events)
     consumed_lines = sum(max(event.line_count, 1) for event in events)
@@ -431,10 +583,26 @@ def summarize_parse_result(
 
 
 def non_empty_lines(text: str) -> list[str]:
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        text (str): Текстовое содержимое лога или фрагмент строки, которое анализируется функцией.
+    
+    Returns:
+        list[str]: Непустые строки текста без окружающих пробелов.
+    """
     return [line for line in text.splitlines() if line.strip()]
 
 
 def safe_json_loads(line: str) -> Any:
+    """Выполняет вспомогательную операцию для JSON.
+    
+    Args:
+        line (str): Одна строка лога, которую нужно разобрать или проверить.
+    
+    Returns:
+        Any: Разобранное JSON-значение или None, если строка не является корректным JSON.
+    """
     try:
         return json.loads(line)
     except json.JSONDecodeError:

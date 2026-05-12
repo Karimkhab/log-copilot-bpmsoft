@@ -8,6 +8,14 @@ from logcopilot.storage import StorageRepository
 
 class StorageTests(unittest.TestCase):
     def test_run_and_event_rows_are_persisted(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: события, строк.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = """2026-03-11 08:20:49,617 [1] ERROR Host Start - Startup failed
 2026-03-11 08:21:15,037 [1] INFO Gateway - GET /api/orders status=200 latency=100ms size=256 ip=10.0.0.1
 """

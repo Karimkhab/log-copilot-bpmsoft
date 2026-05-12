@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""SQLite repository for pipeline runs, artifacts and profile aggregates."""
+"""SQLite-репозиторий для запусков конвейера, артефактов и агрегатов профилей."""
 
 import json
 import logging
@@ -16,39 +16,55 @@ logger = logging.getLogger(__name__)
 
 
 def utc_now() -> str:
-    """Return the current UTC timestamp in compact ISO-8601 form.
-
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        Нет параметров.
+    
     Returns:
-        UTC timestamp string truncated to whole seconds.
+        str: Текущее время UTC в ISO-формате с суффиксом `Z` без микросекунд.
     """
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 class StorageRepository:
-    """SQLite repository for pipeline runs, artifacts, and profile aggregates."""
+    """SQLite-репозиторий для запусков конвейера, артефактов и агрегатов профилей."""
 
     def __init__(self, db_path: Path) -> None:
-        """Initialize the repository and ensure the database schema exists.
+        """Инициализирует объект и сохраняет параметры, необходимые для дальнейшей работы.
 
         Args:
-            db_path: Path to the SQLite database file.
+            db_path (Path): Путь к SQLite-базе данных, где хранятся результаты запусков.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_schema()
 
     def connect(self) -> sqlite3.Connection:
-        """Open a SQLite connection configured to return rows by column name.
-
+        """Выполняет вспомогательную операцию для логики проекта.
+        
+        Args:
+            Нет параметров.
+        
         Returns:
-            SQLite connection with `sqlite3.Row` row factory.
+            sqlite3.Connection: Открытое SQLite-соединение с row_factory=sqlite3.Row для доступа к колонкам по имени.
         """
         connection = sqlite3.connect(self.db_path)
         connection.row_factory = sqlite3.Row
         return connection
 
     def _init_schema(self) -> None:
-        """Create the database schema and backfill columns required by newer runs."""
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         with self.connect() as connection:
             connection.executescript(
                 """
@@ -233,7 +249,17 @@ class StorageRepository:
             self._ensure_column(connection, "agent_results", "input_context_json", "TEXT NOT NULL DEFAULT '{}'")
 
     def _ensure_column(self, connection: sqlite3.Connection, table_name: str, column_name: str, ddl: str) -> None:
-        """Add one missing column to an existing table when needed."""
+        """Проверяет или подготавливает внутренний ресурс, необходимый для выполнения этапа.
+
+        Args:
+            connection (sqlite3.Connection): Открытое соединение с базой данных, через которое выполняются SQL-операции.
+            table_name (str): Имя переменной, поля, провайдера или ресурса, значение которого обрабатывается.
+            column_name (str): Имя переменной, поля, провайдера или ресурса, значение которого обрабатывается.
+            ddl (str): Значение `ddl`, используемое функцией при выполнении операции.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         columns = {
             row["name"]
             for row in connection.execute(f"PRAGMA table_info({table_name})").fetchall()
@@ -246,7 +272,15 @@ class StorageRepository:
         rows: Iterable[sqlite3.Row],
         column_name: str = "payload_json",
     ) -> List[dict]:
-        """Convert SQLite rows to dictionaries and decode one JSON payload column."""
+        """Выполняет вспомогательную операцию для JSON, полезной нагрузки, строк.
+        
+        Args:
+            rows (Iterable[sqlite3.Row]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
+            column_name (str, optional): Имя переменной, поля, провайдера или ресурса, значение которого обрабатывается.
+        
+        Returns:
+            List[dict]: Список строк БД, где JSON-поле payload декодировано и объединено с остальными колонками.
+        """
         payload = []
         for row in rows:
             item = dict(row)
@@ -259,7 +293,15 @@ class StorageRepository:
         row: Optional[sqlite3.Row],
         column_name: str = "payload_json",
     ) -> Optional[dict]:
-        """Convert one SQLite row to a dictionary and decode its JSON payload column."""
+        """Выполняет вспомогательную операцию для JSON, полезной нагрузки, строки.
+        
+        Args:
+            row (Optional[sqlite3.Row]): Одна строка табличных данных, из которой строится объект результата.
+            column_name (str, optional): Имя переменной, поля, провайдера или ресурса, значение которого обрабатывается.
+        
+        Returns:
+            Optional[dict]: Одна строка БД с декодированным JSON payload или None, если строка отсутствует.
+        """
         if row is None:
             return None
         item = dict(row)
@@ -267,37 +309,68 @@ class StorageRepository:
         return item
 
     def _dict_rows(self, rows: Iterable[sqlite3.Row]) -> List[dict]:
-        """Convert SQLite rows into plain dictionaries."""
+        """Выполняет вспомогательную операцию для строк.
+        
+        Args:
+            rows (Iterable[sqlite3.Row]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
+        
+        Returns:
+            List[dict]: Список sqlite3.Row, преобразованных в обычные словари.
+        """
         return [dict(row) for row in rows]
 
     def _fetchall(self, query: str, params: Iterable[object] = ()) -> List[sqlite3.Row]:
-        """Execute one query and return all matching rows."""
+        """Выполняет вспомогательную операцию для логики проекта.
+        
+        Args:
+            query (str): SQL-запрос, который нужно выполнить к базе данных.
+            params (Iterable[object], optional): Параметры SQL-запроса, подставляемые безопасным способом.
+        
+        Returns:
+            List[sqlite3.Row]: Все строки результата SQL-запроса.
+        """
         with self.connect() as connection:
             return connection.execute(query, tuple(params)).fetchall()
 
     def _fetchone(self, query: str, params: Iterable[object] = ()) -> Optional[sqlite3.Row]:
-        """Execute one query and return the first matching row."""
+        """Выполняет вспомогательную операцию для логики проекта.
+        
+        Args:
+            query (str): SQL-запрос, который нужно выполнить к базе данных.
+            params (Iterable[object], optional): Параметры SQL-запроса, подставляемые безопасным способом.
+        
+        Returns:
+            Optional[sqlite3.Row]: Первая строка результата SQL-запроса или None, если данных нет.
+        """
         with self.connect() as connection:
             return connection.execute(query, tuple(params)).fetchone()
 
     def _executemany(self, query: str, rows: List[tuple[object, ...]]) -> None:
-        """Execute a bulk insert or update for precomputed row tuples."""
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            query (str): SQL-запрос, который нужно выполнить к базе данных.
+            rows (List[tuple[object, ...]]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         if not rows:
             return
         with self.connect() as connection:
             connection.executemany(query, rows)
 
     def create_run(self, run_id: str, input_path: str, profile: str, output_dir: str) -> None:
-        """Persist the start of a pipeline run.
+        """Создает новую запись, объект или ресурс, необходимый для выполнения конвейера.
 
         Args:
-            run_id: Unique run identifier.
-            input_path: Source log file path.
-            profile: Selected processing profile.
-            output_dir: Output directory for run artifacts.
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            input_path (str): Путь к входному файлу или директории с логами.
+            profile (str): Профиль анализа логов, определяющий набор вычислений и формат результата.
+            output_dir (str): Директория, в которой создаются артефакты текущего запуска.
 
         Returns:
-            None.
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         with self.connect() as connection:
             connection.execute(
@@ -315,16 +388,16 @@ class StorageRepository:
         )
 
     def complete_run(self, run_id: str, status: str, event_count: int, summary: dict) -> None:
-        """Persist the completion status and summary for a run.
+        """Завершает ранее созданную запись запуска с итоговым статусом и сводкой.
 
         Args:
-            run_id: Unique run identifier.
-            status: Final run status.
-            event_count: Number of parsed events in the run.
-            summary: Final run summary payload.
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            status (str): Значение `status`, используемое функцией при выполнении операции.
+            event_count (int): Значение `event_count`, используемое функцией при выполнении операции.
+            summary (dict): Сводная структура с метриками, статусами и диагностикой выполнения.
 
         Returns:
-            None.
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         with self.connect() as connection:
             connection.execute(
@@ -343,13 +416,13 @@ class StorageRepository:
         )
 
     def insert_events(self, events: Iterable[Event]) -> None:
-        """Insert a batch of canonical events into storage.
+        """Добавляет набор данных в постоянное хранилище проекта. Область применения: событий.
 
         Args:
-            events: Events to persist.
+            events (Iterable[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
 
         Returns:
-            None.
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         rows = [
             (
@@ -399,16 +472,16 @@ class StorageRepository:
         logger.debug("storage_insert_events: rows=%d", len(rows))
 
     def register_artifact(self, run_id: str, artifact_name: str, artifact_type: str, path: str) -> None:
-        """Register or update a run artifact entry.
+        """Регистрирует объект или артефакт в реестре, чтобы его могли использовать следующие этапы. Область применения: артефакта.
 
         Args:
-            run_id: Unique run identifier.
-            artifact_name: Logical artifact name.
-            artifact_type: Artifact category used by the UI and storage.
-            path: Filesystem path to the artifact.
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            artifact_name (str): Имя артефакта в манифесте и базе данных.
+            artifact_type (str): Тип артефакта, используемый при регистрации результата.
+            path (str): Путь к файлу или артефакту, с которым работает функция.
 
         Returns:
-            None.
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         with self.connect() as connection:
             connection.execute(
@@ -429,7 +502,16 @@ class StorageRepository:
         )
 
     def store_agent_result(self, run_id: str, result: dict, input_context: Optional[dict] = None) -> None:
-        """Persist the optional pipeline agent result for a run."""
+        """Сохраняет данные текущего этапа в постоянное хранилище. Область применения: агентского этапа.
+
+        Args:
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            result (dict): Результат выполнения конвейера или промежуточного этапа, из которого берутся данные.
+            input_context (Optional[dict], optional): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         with self.connect() as connection:
             connection.execute(
                 """
@@ -524,14 +606,14 @@ class StorageRepository:
         )
 
     def insert_incident_clusters(self, run_id: str, clusters: Iterable[ClusterSummary]) -> None:
-        """Insert signature-based incident cluster summaries.
+        """Добавляет набор данных в постоянное хранилище проекта. Область применения: инцидента, кластеров.
 
         Args:
-            run_id: Unique run identifier.
-            clusters: Incident cluster summaries to persist.
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            clusters (Iterable[ClusterSummary]): Список кластеров событий, используемый для отчетов или сохранения.
 
         Returns:
-            None.
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         rows = [
             (
@@ -577,14 +659,14 @@ class StorageRepository:
         run_id: str,
         clusters: Iterable[SemanticClusterSummary],
     ) -> None:
-        """Insert semantic cluster summaries for a run.
+        """Добавляет набор данных в постоянное хранилище проекта. Область применения: семантического анализа, кластеров.
 
         Args:
-            run_id: Unique run identifier.
-            clusters: Semantic cluster summaries to persist.
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            clusters (Iterable[SemanticClusterSummary]): Список кластеров событий, используемый для отчетов или сохранения.
 
         Returns:
-            None.
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         rows = [
             (
@@ -611,14 +693,14 @@ class StorageRepository:
         logger.info("storage_insert_semantic_clusters: run_id=%s rows=%d", run_id, len(rows))
 
     def insert_heatmap_metrics(self, run_id: str, rows: Iterable[dict]) -> None:
-        """Insert aggregated heatmap rows for a run.
+        """Добавляет набор данных в постоянное хранилище проекта. Область применения: тепловой карты.
 
         Args:
-            run_id: Unique run identifier.
-            rows: Heatmap metric rows to persist.
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            rows (Iterable[dict]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
 
         Returns:
-            None.
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         values = [
             (
@@ -644,14 +726,14 @@ class StorageRepository:
         logger.info("storage_insert_heatmap_metrics: run_id=%s rows=%d", run_id, len(values))
 
     def insert_traffic_metrics(self, run_id: str, rows: Iterable[dict]) -> None:
-        """Insert aggregated traffic summary rows for a run.
+        """Добавляет набор данных в постоянное хранилище проекта. Область применения: трафика.
 
         Args:
-            run_id: Unique run identifier.
-            rows: Traffic metric rows to persist.
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            rows (Iterable[dict]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
 
         Returns:
-            None.
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         values = [
             (
@@ -680,14 +762,14 @@ class StorageRepository:
         logger.info("storage_insert_traffic_metrics: run_id=%s rows=%d", run_id, len(values))
 
     def insert_traffic_anomalies(self, run_id: str, rows: Iterable[dict]) -> None:
-        """Insert derived traffic anomalies for a run.
+        """Добавляет набор данных в постоянное хранилище проекта. Область применения: трафика.
 
         Args:
-            run_id: Unique run identifier.
-            rows: Traffic anomaly rows to persist.
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            rows (Iterable[dict]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
 
         Returns:
-            None.
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         values = [
             (
@@ -712,13 +794,13 @@ class StorageRepository:
         logger.info("storage_insert_traffic_anomalies: run_id=%s rows=%d", run_id, len(values))
 
     def list_runs(self, limit: int = 20) -> List[sqlite3.Row]:
-        """List recent pipeline runs.
-
+        """Выполняет вспомогательную операцию для логики проекта.
+        
         Args:
-            limit: Maximum number of runs to return.
-
+            limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+        
         Returns:
-            Recent run rows ordered by creation time descending.
+            List[sqlite3.Row]: Последние запуски конвейера, отсортированные от новых к старым.
         """
         return self._fetchall(
             """
@@ -731,13 +813,13 @@ class StorageRepository:
         )
 
     def get_run_summary(self, run_id: str) -> Optional[dict]:
-        """Fetch run metadata together with its registered artifacts.
-
+        """Возвращает данные из хранилища или подготовленной структуры по заданным условиям. Область применения: сводки.
+        
         Args:
-            run_id: Unique run identifier.
-
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+        
         Returns:
-            Run summary dictionary, or `None` when the run does not exist.
+            Optional[dict]: Сводка запуска из runs.summary_json с добавленными служебными колонками; None, если run_id не найден.
         """
         run = self._fetchone("SELECT * FROM runs WHERE run_id = ?", (run_id,))
         if run is None:
@@ -757,14 +839,14 @@ class StorageRepository:
         return summary
 
     def get_artifact(self, run_id: str, artifact_name: str) -> Optional[dict]:
-        """Fetch metadata for a single artifact registered by a run.
-
+        """Возвращает данные из хранилища или подготовленной структуры по заданным условиям. Область применения: артефакта.
+        
         Args:
-            run_id: Unique run identifier.
-            artifact_name: Logical artifact name.
-
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            artifact_name (str): Имя артефакта в манифесте и базе данных.
+        
         Returns:
-            Artifact metadata dictionary, or `None` if not found.
+            Optional[dict]: Метаданные указанного артефакта запуска или None, если артефакт не зарегистрирован.
         """
         row = self._fetchone(
             """
@@ -777,7 +859,14 @@ class StorageRepository:
         return dict(row) if row is not None else None
 
     def get_agent_result(self, run_id: str) -> Optional[dict]:
-        """Fetch the persisted optional pipeline agent result for a run."""
+        """Возвращает данные из хранилища или подготовленной структуры по заданным условиям. Область применения: агентского этапа.
+        
+        Args:
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+        
+        Returns:
+            Optional[dict]: Сохраненный результат агентского этапа с декодированными JSON-полями или None.
+        """
         row = self._fetchone(
             """
             SELECT status, provider, model, overall_status, confidence, short_summary,
@@ -810,7 +899,14 @@ class StorageRepository:
         return result
 
     def get_agent_cards(self, run_id: str) -> List[dict]:
-        """Fetch persisted structured agent cards for a run."""
+        """Возвращает данные из хранилища или подготовленной структуры по заданным условиям. Область применения: агентского этапа, карточек.
+        
+        Args:
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+        
+        Returns:
+            List[dict]: Карточки агентского результата для запуска, отсортированные по card_index.
+        """
         rows = self._fetchall(
             """
             SELECT card_index, card_type, title, severity, confidence, payload_json
@@ -823,13 +919,13 @@ class StorageRepository:
         return self._decode_json_payload_rows(rows)
 
     def get_event_field_stats(self, run_id: str) -> dict:
-        """Compute field coverage statistics for persisted events.
-
+        """Возвращает данные из хранилища или подготовленной структуры по заданным условиям. Область применения: события.
+        
         Args:
-            run_id: Unique run identifier.
-
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+        
         Returns:
-            Aggregate event field statistics for the run.
+            dict: Статистика заполненности ключевых полей событий для указанного запуска.
         """
         row = self._fetchone(
             """
@@ -852,14 +948,14 @@ class StorageRepository:
         return dict(row) if row is not None else {}
 
     def get_top_incidents(self, run_id: str, limit: int = 10) -> List[dict]:
-        """Return top incident clusters ordered by severity and volume.
-
+        """Возвращает данные из хранилища или подготовленной структуры по заданным условиям. Область применения: инцидентов.
+        
         Args:
-            run_id: Unique run identifier.
-            limit: Maximum number of incident clusters to return.
-
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+        
         Returns:
-            Incident cluster payloads with decoded JSON details.
+            List[dict]: Самые значимые incident-кластеры запуска с декодированной полезной нагрузкой.
         """
         rows = self._fetchall(
             """
@@ -875,14 +971,14 @@ class StorageRepository:
         return self._decode_json_payload_rows(rows)
 
     def find_incident_cluster(self, run_id: str, cluster_id: str) -> Optional[dict]:
-        """Fetch a specific incident cluster by its cluster id.
-
+        """Выполняет вспомогательную операцию для инцидента, кластера.
+        
         Args:
-            run_id: Unique run identifier.
-            cluster_id: Signature-based cluster identifier.
-
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            cluster_id (str): Значение `cluster_id`, используемое функцией при выполнении операции.
+        
         Returns:
-            Incident cluster payload, or `None` when absent.
+            Optional[dict]: Данные конкретного incident-кластера или None, если cluster_id не найден.
         """
         row = self._fetchone(
             """
@@ -896,14 +992,14 @@ class StorageRepository:
         return self._decode_json_payload_row(row)
 
     def get_heatmap(self, run_id: str, limit: Optional[int] = 100) -> List[dict]:
-        """Return persisted heatmap rows for a run.
-
+        """Возвращает данные из хранилища или подготовленной структуры по заданным условиям. Область применения: тепловой карты.
+        
         Args:
-            run_id: Unique run identifier.
-            limit: Optional maximum number of rows to return.
-
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            limit (Optional[int], optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+        
         Returns:
-            Heatmap rows ordered by hottest buckets first.
+            List[dict]: Строки тепловой карты запуска, ограниченные limit и отсортированные по времени/нагрузке.
         """
         query = """
             SELECT bucket_start, component, operation, hits, qps, p95_latency_ms
@@ -924,15 +1020,15 @@ class StorageRepository:
         status: Optional[int] = None,
         limit: int = 100,
     ) -> List[dict]:
-        """Return persisted traffic rows for a run.
-
+        """Возвращает данные из хранилища или подготовленной структуры по заданным условиям. Область применения: трафика, сводки.
+        
         Args:
-            run_id: Unique run identifier.
-            status: Optional HTTP status code filter.
-            limit: Maximum number of rows to return.
-
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            status (Optional[int], optional): Значение `status`, используемое функцией при выполнении операции.
+            limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+        
         Returns:
-            Traffic summary rows ordered by frequency and latency.
+            List[dict]: Строки агрегатов трафика с методом, путем, статусом, количеством запросов и задержками.
         """
         query = """
             SELECT method, path, http_status, hits, unique_ips, p95_latency_ms, p99_latency_ms,
@@ -950,14 +1046,14 @@ class StorageRepository:
         return self._dict_rows(rows)
 
     def get_traffic_anomalies(self, run_id: str, limit: int = 50) -> List[dict]:
-        """Return persisted traffic anomalies for a run.
-
+        """Возвращает данные из хранилища или подготовленной структуры по заданным условиям. Область применения: трафика.
+        
         Args:
-            run_id: Unique run identifier.
-            limit: Maximum number of anomalies to return.
-
+            run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+            limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+        
         Returns:
-            Traffic anomaly payloads with decoded JSON details.
+            List[dict]: Сохраненные аномалии трафика для запуска, отсортированные по серьезности и лимиту.
         """
         rows = self._fetchall(
             """

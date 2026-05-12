@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Domain types used across parsing, analysis, storage and reporting."""
+"""Доменные типы, используемые в парсинге, анализе, хранилище и отчетности."""
 
 from .models import (
     AnalysisSummary,

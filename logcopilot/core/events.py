@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Canonical event builder shared by parsing and profile execution."""
+"""Построитель канонических событий, общий для парсинга и выполнения профилей."""
 
 import uuid
 from typing import Optional
@@ -20,7 +20,16 @@ def _build_event_from_raw_like(
     run_id: str,
     normalization_stats: Optional[NormalizationStats] = None,
 ) -> Event:
-    """Build an Event from a raw-like compatibility shape."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: события.
+    
+    Args:
+        raw_event (RawEvent): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
+        run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+        normalization_stats (Optional[NormalizationStats], optional): Объект статистики нормализации, куда записываются сведения о масках.
+    
+    Returns:
+        Event: Обогащенное каноническое событие с нормализованным сообщением, сигнатурой, признаками инцидента и идентификатором.
+    """
     normalized_message, exception_type, stack_frames, is_incident = make_event_signature(
         raw_event,
         normalization_stats=normalization_stats,
@@ -68,13 +77,15 @@ def build_event(
     run_id: str,
     normalization_stats: Optional[NormalizationStats] = None,
 ) -> Event:
-    """
-    Строит канонический Event из RawEvent.
-
-    Важно:
-    - здесь выполняется общая нормализация текста;
-    - часть полей (exception/stack/signature/is_incident) пока вычисляется здесь
-      для обратной совместимости текущего incidents-flow.
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: события.
+    
+    Args:
+        raw_event (RawEvent): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
+        run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+        normalization_stats (Optional[NormalizationStats], optional): Объект статистики нормализации, куда записываются сведения о масках.
+    
+    Returns:
+        Event: Каноническое событие, построенное из RawEvent и готовое для профилей, отчетов и сохранения.
     """
     return _build_event_from_raw_like(
         raw_event,
@@ -89,7 +100,17 @@ def build_event_from_canonical(
     run_id: str,
     normalization_stats: Optional[NormalizationStats] = None,
 ) -> Event:
-    """Build a canonical Event directly from the parsing subsystem output."""
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: события.
+    
+    Args:
+        event (CanonicalEvent): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
+        source_file (str): Имя файла-источника, которое попадет в событие и отчетные артефакты.
+        run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+        normalization_stats (Optional[NormalizationStats], optional): Объект статистики нормализации, куда записываются сведения о масках.
+    
+    Returns:
+        Event: Каноническое событие доменного слоя, построенное напрямую из CanonicalEvent парсера.
+    """
     raw_event = RawEvent(
         source_file=source_file,
         parser_profile=event.parser_name,

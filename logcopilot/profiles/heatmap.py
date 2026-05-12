@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Heatmap profile: aggregate per-minute hotspots and operational findings."""
+"""Профиль тепловой карты: поминутные горячие точки и операционные выводы."""
 
 import re
 from collections import Counter, defaultdict
@@ -17,13 +17,13 @@ _WHITESPACE_RE = re.compile(r"\s+")
 
 
 def normalize_text(value: str | None) -> str:
-    """Normalize free-form values used in heatmap dimensions.
-
+    """Нормализует входное значение к каноническому виду, удобному для сравнения и агрегации.
+    
     Args:
-        value: Raw value to normalize.
-
+        value (str | None): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
     Returns:
-        Compact normalized string or `"unknown"`.
+        str: Очищенная строка для группировки тепловой карты; `unknown`, если значение пустое.
     """
     if not value:
         return "unknown"
@@ -32,13 +32,13 @@ def normalize_text(value: str | None) -> str:
 
 
 def normalize_path(path: str | None) -> str | None:
-    """Normalize request paths by masking volatile identifiers.
-
+    """Нормализует входное значение к каноническому виду, удобному для сравнения и агрегации. Область применения: пути.
+    
     Args:
-        path: Raw request path or URL.
-
+        path (str | None): Путь к файлу или артефакту, с которым работает функция.
+    
     Returns:
-        Normalized path, or `None` when input is empty.
+        str | None: Нормализованный HTTP-путь без query-string и завершающего слеша; None, если пути нет.
     """
     if not path:
         return None
@@ -54,26 +54,26 @@ def normalize_path(path: str | None) -> str | None:
 
 
 def top_counter_items(counter: Counter, limit: int = 10) -> List[dict]:
-    """Convert a counter into a compact top-N list payload.
-
+    """Возвращает наиболее значимые элементы по частоте, весу или другому критерию.
+    
     Args:
-        counter: Counter to serialize.
-        limit: Maximum number of items to return.
-
+        counter (Counter): Счетчик частот, из которого выбираются наиболее частые элементы.
+        limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+    
     Returns:
-        List of `{value, hits}` dictionaries.
+        List[dict]: Список самых частых элементов счетчика в виде словарей с `value` и `count`.
     """
     return [{"value": value, "hits": hits} for value, hits in counter.most_common(limit)]
 
 
 def minute_bucket(timestamp: datetime | None) -> str:
-    """Convert a timestamp into a per-minute aggregation bucket.
-
+    """Выполняет вспомогательную операцию для логики проекта.
+    
     Args:
-        timestamp: Event timestamp.
-
+        timestamp (datetime | None): Значение `timestamp`, используемое функцией при выполнении операции.
+    
     Returns:
-        Minute bucket string or `"unknown"`.
+        str: ISO-строка начала минутного бакета или `unknown`, если временная метка отсутствует.
     """
     if timestamp is None:
         return "unknown"
@@ -81,13 +81,13 @@ def minute_bucket(timestamp: datetime | None) -> str:
 
 
 def percentile_95(values: List[float]) -> float | None:
-    """Compute the inclusive 95th percentile for latency samples.
-
+    """Выполняет вспомогательную операцию для логики проекта.
+    
     Args:
-        values: Numeric sample values.
-
+        values (List[float]): Набор входных значений, используемых при вычислении результата.
+    
     Returns:
-        Rounded 95th percentile, or `None` when samples are absent.
+        float | None: Приближенный 95-й перцентиль значений; None для пустого списка.
     """
     if not values:
         return None
@@ -97,13 +97,13 @@ def percentile_95(values: List[float]) -> float | None:
 
 
 def derive_operation(event: Event) -> str:
-    """Derive an operation label for heatmap aggregation.
-
+    """Выполняет вспомогательную операцию для логики проекта.
+    
     Args:
-        event: Canonical event to summarize.
-
+        event (Event): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
+    
     Returns:
-        Operation label used in heatmap rows.
+        str: Операция события для агрегирования: компонент, HTTP-метод с путем или fallback-источник.
     """
     normalized_path = normalize_path(event.path)
     if normalized_path:
@@ -118,15 +118,16 @@ def derive_operation(event: Event) -> str:
 
 
 def build_heatmap_rows(events: Iterable[Event]) -> List[dict]:
-    """Aggregate events into heatmap time buckets.
-
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: тепловой карты, строк.
+    
     Args:
-        events: Canonical events to aggregate.
-
+        events (Iterable[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+    
     Returns:
-        Sorted heatmap metric rows.
+        List[dict]: Поминутные строки тепловой карты с количеством событий, ошибками, статусами, компонентами и задержками.
     """
     grouped = defaultdict(list)
+    # Проходим события один раз и одновременно накапливаем агрегаты для отчета.
     for event in events:
         bucket = minute_bucket(event.timestamp)
         component = normalize_text(event.component)
@@ -155,8 +156,16 @@ def build_heatmap_rows(events: Iterable[Event]) -> List[dict]:
 
 
 def _build_ip_bursts(events: Iterable[Event]) -> List[dict]:
-    """Aggregate per-minute request bursts for each client IP."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки.
+    
+    Args:
+        events (Iterable[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+    
+    Returns:
+        List[dict]: Сводка активности IP-адресов по минутам с количеством событий и разнообразием путей.
+    """
     per_ip_bucket = defaultdict(int)
+    # Проходим события один раз и одновременно накапливаем агрегаты для отчета.
     for event in events:
         ip = getattr(event, "client_ip", None)
         if not ip:
@@ -170,7 +179,15 @@ def _build_ip_bursts(events: Iterable[Event]) -> List[dict]:
 
 
 def _build_suspicious_ip_bursts(ip_bursts: List[dict], limit: int = 10) -> List[dict]:
-    """Return the highest-volume suspicious IP bursts."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки.
+    
+    Args:
+        ip_bursts (List[dict]): Значение `ip_bursts`, используемое функцией при выполнении операции.
+        limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+    
+    Returns:
+        List[dict]: Подозрительные всплески IP-активности, отсортированные по числу событий и разнообразию путей.
+    """
     suspicious = []
     for item in ip_bursts:
         if item["hits"] >= 20:
@@ -181,7 +198,15 @@ def _build_suspicious_ip_bursts(ip_bursts: List[dict], limit: int = 10) -> List[
 
 
 def _build_hottest_buckets(rows: List[dict], limit: int = 10) -> List[dict]:
-    """Return the hottest heatmap buckets in compact JSON-ready form."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки.
+    
+    Args:
+        rows (List[dict]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
+        limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+    
+    Returns:
+        List[dict]: Самые нагруженные минутные бакеты с ошибками, задержками и основными компонентами.
+    """
     return [
         {
             "bucket_start": row["bucket_start"],
@@ -196,14 +221,14 @@ def _build_hottest_buckets(rows: List[dict], limit: int = 10) -> List[dict]:
 
 
 def build_heatmap_findings(events: List[Event], rows: List[dict]) -> dict:
-    """Build a JSON findings payload for the heatmap profile.
-
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: тепловой карты.
+    
     Args:
-        events: Canonical events used by the profile.
-        rows: Aggregated heatmap rows.
-
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        rows (List[dict]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
+    
     Returns:
-        Findings payload with counts, bursts and LLM-ready highlights.
+        dict: Выводы тепловой карты: горячие интервалы, подозрительные IP-всплески и общие счетчики.
     """
     component_counts = Counter(normalize_text(event.component) for event in events)
     operation_counts = Counter(derive_operation(event) for event in events)
@@ -239,14 +264,14 @@ def build_heatmap_findings(events: List[Event], rows: List[dict]) -> dict:
 
 
 def run_heatmap_profile(events: List[Event], output_dir) -> dict:
-    """Compute the heatmap profile result.
-
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: тепловой карты, профиля.
+    
     Args:
-        events: Canonical events to analyze.
-        output_dir: Compatibility argument retained for existing callers.
-
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        output_dir (Any): Директория, в которой создаются артефакты текущего запуска.
+    
     Returns:
-        Profile payload with rows, findings and summary metadata.
+        dict: Полезная нагрузка профиля тепловой карты со строками timeseries, выводами, сводкой и analysis_summary.
     """
     del output_dir
     rows = build_heatmap_rows(events)

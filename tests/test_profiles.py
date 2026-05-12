@@ -9,6 +9,14 @@ from logcopilot.pipeline import run_pipeline
 
 class ProfileComputeOnlyTests(unittest.TestCase):
     def test_profile_entrypoints_do_not_write_artifacts_directly(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: профиля, артефактов.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             output_dir = root / "profile"
@@ -25,6 +33,14 @@ class ProfileComputeOnlyTests(unittest.TestCase):
 
 class ProfileIntegrationTests(unittest.TestCase):
     def test_incidents_profile_on_java_style_logs_extracts_structure(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: инцидентов, профиля, логов.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = """17/06/09 20:10:42 ERROR executor.CoarseGrainedExecutorBackend: Executor lost due to IOException|java.io.IOException: Connection refused
    at org.apache.spark.Executor.run(Executor.scala:123)
 17/06/09 20:10:43 WARN executor.CoarseGrainedExecutorBackend: Executor failed to reconnect after timeout
@@ -49,6 +65,14 @@ class ProfileIntegrationTests(unittest.TestCase):
             self.assertGreaterEqual(metrics["incident_event_count"], 2)
 
     def test_heatmap_profile_returns_product_output_only(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: тепловой карты, профиля.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = """2026-03-11 08:20:00 INFO Gateway - GET /api/orders status=200 latency=120ms size=320 ip=10.0.0.1
 2026-03-11 08:20:10 INFO Gateway - GET /api/orders status=200 latency=250ms size=330 ip=10.0.0.2
 2026-03-11 08:21:00 INFO Billing - POST /api/payments status=200 latency=900ms size=512 ip=10.0.0.3
@@ -71,6 +95,14 @@ class ProfileIntegrationTests(unittest.TestCase):
             self.assertFalse((run_dir / "top_hotspots.md").exists())
 
     def test_traffic_profile_returns_product_output_only(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: трафика, профиля.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = """2026-03-11 08:20:00 INFO Gateway - GET /api/orders status=500 latency=1200ms size=320 ip=10.0.0.1
 2026-03-11 08:20:10 INFO Gateway - GET /api/orders status=500 latency=1500ms size=330 ip=10.0.0.2
 2026-03-11 08:20:20 INFO Gateway - GET /health status=200 latency=10ms size=10 ip=10.0.0.3
@@ -90,6 +122,14 @@ class ProfileIntegrationTests(unittest.TestCase):
             self.assertFalse((run_dir / "suspicious_traffic.md").exists())
 
     def test_windows_servicing_run_summary_contains_parser_diagnostics(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: Windows servicing, сводки, парсера.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = """2016-09-28 04:30:31, Info                  CBS    Warning: Unrecognized packageExtended attribute.
 2016-09-28 04:30:31, Info                  CBS    Expecting attribute name [HRESULT = 0x800f080d - CBS_E_MANIFEST_INVALID_ITEM]
 2016-09-28 04:30:31, Info                  CBS    Failed to get next element [HRESULT = 0x800f080d - CBS_E_MANIFEST_INVALID_ITEM]
@@ -113,6 +153,14 @@ class ProfileIntegrationTests(unittest.TestCase):
             self.assertGreaterEqual(diagnostics["parse_quality"]["score"], 0.75)
 
     def test_access_log_run_summary_marks_incidents_as_bad_fit(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: access-лога, лога, сводки.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = """199.60.47.128 - - [01/Jan/2016:00:25:53 +0100] "GET http://example.com/login HTTP/1.1" 302 0
 199.60.47.128 - - [01/Jan/2016:00:26:01 +0100] "POST http://example.com/api/orders HTTP/1.1" 500 128
 """

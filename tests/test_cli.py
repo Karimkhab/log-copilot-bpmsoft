@@ -10,6 +10,14 @@ from logcopilot.cli import main as cli_main
 
 class CliTests(unittest.TestCase):
     def test_cli_run_command_creates_run_directory(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: интерфейса командной строки.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = "2026-03-11 08:20:00 INFO Gateway - GET /api/orders status=200 latency=25ms size=32 ip=10.0.0.1\n"
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

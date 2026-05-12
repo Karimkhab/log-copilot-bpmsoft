@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Single profile-aware pipeline agent stage."""
+"""Единый агентский этап конвейера с учетом выбранного профиля."""
 
 import json
 import logging
@@ -60,13 +60,28 @@ _CARD_FACT_FIELDS = {
 
 
 def _ensure_agent_logging() -> None:
-    """Show agent diagnostics in CLI runs when the app did not configure logging."""
+    """Проверяет или подготавливает внутренний ресурс, необходимый для выполнения этапа. Область применения: агентского этапа.
+
+    Args:
+        Нет параметров.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     if not logging.getLogger().handlers:
         logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(name)s: %(message)s")
 
 
 def _clip_text(value: Any, limit: int = MAX_AGENT_TEXT_CHARS) -> str:
-    """Normalize model output strings to bounded text."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+        limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+    
+    Returns:
+        str: Однострочный текст для карточек агента, очищенный от переводов строк и обрезанный до `limit` символов.
+    """
     if value is None:
         return ""
     text = str(value).replace("\n", " ").strip()
@@ -76,24 +91,55 @@ def _clip_text(value: Any, limit: int = MAX_AGENT_TEXT_CHARS) -> str:
 
 
 def _as_dict(value: Any) -> Dict[str, Any]:
-    """Return a mapping value or an empty mapping."""
+    """Выполняет вспомогательную операцию для логики проекта.
+
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+
+    Returns:
+        dict: Словарь с полями объекта, пригодный для сериализации и записи в артефакты.
+    """
     return dict(value) if isinstance(value, dict) else {}
 
 
 def _as_list(value: Any, limit: int = MAX_AGENT_LIST_ITEMS) -> List[Any]:
-    """Return a bounded list value."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+        limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+    
+    Returns:
+        List[Any]: Первые `limit` элементов, если value является списком; иначе пустой список.
+    """
     if not isinstance(value, list):
         return []
     return value[:limit]
 
 
 def _string_list(value: Any, limit: int = MAX_AGENT_LIST_ITEMS) -> List[str]:
-    """Normalize a model-produced list of text items."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+        limit (int, optional): Максимальное количество элементов или символов, которые нужно вернуть или сохранить.
+    
+    Returns:
+        List[str]: Непустые строки из списка модели, очищенные и обрезанные для безопасного вывода в карточках.
+    """
     return [_clip_text(item, 360) for item in _as_list(value, limit) if _clip_text(item)]
 
 
 def _float_value(value: Any, default: float = 0.0) -> float:
-    """Coerce a value to float."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+        default (float, optional): Значение по умолчанию, возвращаемое при невозможности корректного преобразования.
+    
+    Returns:
+        float: value, приведенное к float; default, если преобразование невозможно.
+    """
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -101,7 +147,15 @@ def _float_value(value: Any, default: float = 0.0) -> float:
 
 
 def _int_value(value: Any, default: int = 0) -> int:
-    """Coerce a value to int."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+        default (int, optional): Значение по умолчанию, возвращаемое при невозможности корректного преобразования.
+    
+    Returns:
+        int: value, приведенное к int; default, если преобразование невозможно.
+    """
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -109,32 +163,70 @@ def _int_value(value: Any, default: int = 0) -> int:
 
 
 def _optional_int(value: Any) -> Optional[int]:
-    """Coerce a value to optional int."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        Optional[int]: Целое число после преобразования или None, если значение пустое.
+    """
     if value is None or value == "":
         return None
     return _int_value(value)
 
 
 def _optional_float(value: Any) -> Optional[float]:
-    """Coerce a value to optional float."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        Optional[float]: Число с плавающей точкой после преобразования или None, если значение пустое.
+    """
     if value is None or value == "":
         return None
     return _float_value(value)
 
 
 def _confidence(value: Any, default: float = 0.5) -> float:
-    """Clamp confidence to the public 0..1 contract."""
+    """Выполняет вспомогательную операцию для уверенности.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+        default (float, optional): Значение по умолчанию, возвращаемое при невозможности корректного преобразования.
+    
+    Returns:
+        float: Оценка уверенности в диапазоне от 0.0 до 1.0.
+    """
     return max(0.0, min(1.0, _float_value(value, default)))
 
 
 def _severity(value: Any, default: str = "medium") -> str:
-    """Normalize a severity string."""
+    """Выполняет вспомогательную операцию для серьезности.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+        default (str, optional): Значение по умолчанию, возвращаемое при невозможности корректного преобразования.
+    
+    Returns:
+        str: Нормализованный уровень серьезности, допустимый для публичного результата.
+    """
     severity = str(value or default).lower()
     return severity if severity in _SEVERITIES else default
 
 
 def _severity_floor(value: Any, deterministic: str) -> str:
-    """Do not let the model understate deterministic card severity."""
+    """Выполняет вспомогательную операцию для серьезности.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+        deterministic (str): Детерминированное значение, используемое как нижняя граница результата модели.
+    
+    Returns:
+        str: Нормализованный уровень серьезности, допустимый для публичного результата.
+    """
     severity = _severity(value or deterministic, deterministic)
     if _SEVERITY_RANK.get(deterministic, 0) > _SEVERITY_RANK.get(severity, 0):
         return deterministic
@@ -142,7 +234,14 @@ def _severity_floor(value: Any, deterministic: str) -> str:
 
 
 def _fact_limitations(input_context: AgentInputContext) -> List[str]:
-    """Build deterministic limitations from parser/profile quality facts."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+    
+    Returns:
+        List[str]: Список ограничений интерпретации, которые нужно показать пользователю или сохранить в результате.
+    """
     limitations = []
     parse_quality = _as_dict(input_context.parser_diagnostics.get("parse_quality"))
     if parse_quality.get("label") == "low":
@@ -160,7 +259,14 @@ def _fact_limitations(input_context: AgentInputContext) -> List[str]:
 
 
 def _provider_limitation(config: AgentModelConfig) -> List[str]:
-    """Return a limitation explaining deterministic fallback when no LLM call is used."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        config (AgentModelConfig): Конфигурация запуска или внешнего провайдера, влияющая на поведение функции.
+    
+    Returns:
+        List[str]: Список ограничений интерпретации, которые нужно показать пользователю или сохранить в результате.
+    """
     if config.provider == "none":
         return ["LLM provider is disabled; result is based on deterministic aggregate rules."]
     if not provider_is_configured(config):
@@ -169,7 +275,15 @@ def _provider_limitation(config: AgentModelConfig) -> List[str]:
 
 
 def _status_from_severities(severities: Iterable[str], has_cards: bool) -> str:
-    """Derive run-level status from card severities."""
+    """Выполняет вспомогательную операцию для статуса.
+    
+    Args:
+        severities (Iterable[str]): Набор уровней серьезности, по которым вычисляется общий статус.
+        has_cards (bool): Признак наличия карточек, влияющий на итоговый статус.
+    
+    Returns:
+        str: Итоговый статус выполнения или интерпретации, рассчитанный по входным признакам.
+    """
     severity_set = set(severities)
     if "critical" in severity_set:
         return "critical"
@@ -179,7 +293,16 @@ def _status_from_severities(severities: Iterable[str], has_cards: bool) -> str:
 
 
 def _status_floor(status: str, cards: List[Any], profile: str) -> str:
-    """Do not let the model understate deterministic card severity."""
+    """Выполняет вспомогательную операцию для статуса.
+    
+    Args:
+        status (str): Значение `status`, используемое функцией при выполнении операции.
+        cards (List[Any]): Список карточек выводов, из которых формируется публичный результат.
+        profile (str): Профиль анализа логов, определяющий набор вычислений и формат результата.
+    
+    Returns:
+        str: Итоговый статус выполнения или интерпретации, рассчитанный по входным признакам.
+    """
     derived = _status_from_severities([getattr(card, "severity", "low") for card in cards], bool(cards))
     if _STATUS_RANK.get(derived, 0) > _STATUS_RANK.get(status, 0):
         logger.warning(
@@ -193,7 +316,15 @@ def _status_floor(status: str, cards: List[Any], profile: str) -> str:
 
 
 def _result_confidence(input_context: AgentInputContext, card_confidences: List[float]) -> float:
-    """Combine card confidence with parse quality into one bounded score."""
+    """Выполняет вспомогательную операцию для уверенности.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+        card_confidences (List[float]): Оценки уверенности карточек, используемые для общего показателя уверенности.
+    
+    Returns:
+        float: Оценка уверенности в диапазоне от 0.0 до 1.0.
+    """
     parse_quality = _as_dict(input_context.parser_diagnostics.get("parse_quality"))
     parse_score = _confidence(parse_quality.get("score"), 0.6)
     if not card_confidences:
@@ -202,7 +333,14 @@ def _result_confidence(input_context: AgentInputContext, card_confidences: List[
 
 
 def _incident_severity(fact: Dict[str, Any]) -> str:
-    """Derive incident severity from deterministic cluster facts."""
+    """Выполняет вспомогательную операцию для инцидента, серьезности.
+    
+    Args:
+        fact (Dict[str, Any]): Нормализованный факт анализа, из которого строится карточка или оценка.
+    
+    Returns:
+        str: Нормализованный уровень серьезности, допустимый для публичного результата.
+    """
     incident_hits = _int_value(fact.get("incident_hits"))
     hits = _int_value(fact.get("hits"))
     label = str(fact.get("confidence_label") or "").lower()
@@ -216,7 +354,14 @@ def _incident_severity(fact: Dict[str, Any]) -> str:
 
 
 def _incident_card_from_fact(fact: Dict[str, Any]) -> IncidentCard:
-    """Build one deterministic incident card."""
+    """Выполняет вспомогательную операцию для инцидента, карточки.
+    
+    Args:
+        fact (Dict[str, Any]): Нормализованный факт анализа, из которого строится карточка или оценка.
+    
+    Returns:
+        IncidentCard: Детерминированная карточка incident-кластера с серьезностью, счетчиками, временем, evidence и действиями.
+    """
     cluster_id = _clip_text(fact.get("cluster_id", ""), 120)
     incident_hits = _int_value(fact.get("incident_hits"))
     hits = _int_value(fact.get("hits"))
@@ -249,7 +394,14 @@ def _incident_card_from_fact(fact: Dict[str, Any]) -> IncidentCard:
 
 
 def _incident_observation_card(input_context: AgentInputContext) -> Optional[IncidentCard]:
-    """Build a useful low-severity card when incidents profile has events but no strong clusters."""
+    """Выполняет вспомогательную операцию для инцидента, карточки.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+    
+    Returns:
+        Optional[IncidentCard]: Объект IncidentCard, если его удалось получить; иначе None.
+    """
     facts = _as_dict(input_context.facts)
     summary = _as_dict(facts.get("summary"))
     analysis = _as_dict(facts.get("analysis_summary"))
@@ -287,7 +439,15 @@ def _incident_observation_card(input_context: AgentInputContext) -> Optional[Inc
 
 
 def _build_incidents_result(input_context: AgentInputContext, config: AgentModelConfig) -> AgentResult:
-    """Build deterministic structured interpretation for incidents."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: инцидентов.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+        config (AgentModelConfig): Конфигурация запуска или внешнего провайдера, влияющая на поведение функции.
+    
+    Returns:
+        AgentResult: Структурированный агентский результат с общим статусом, уверенностью, карточками, выводами и рекомендациями.
+    """
     facts = _as_dict(input_context.facts)
     cluster_facts = _as_list(facts.get("compact_llm_ready_cluster_facts"), MAX_INCIDENT_CARDS)
     cards = [_incident_card_from_fact(_as_dict(item)) for item in cluster_facts]
@@ -341,7 +501,14 @@ def _build_incidents_result(input_context: AgentInputContext, config: AgentModel
 
 
 def _heatmap_severity(fact: Dict[str, Any]) -> str:
-    """Derive heatmap severity from load and latency."""
+    """Выполняет вспомогательную операцию для тепловой карты, серьезности.
+    
+    Args:
+        fact (Dict[str, Any]): Нормализованный факт анализа, из которого строится карточка или оценка.
+    
+    Returns:
+        str: Нормализованный уровень серьезности, допустимый для публичного результата.
+    """
     hits = _int_value(fact.get("hits"))
     qps = _float_value(fact.get("qps"))
     p95 = _float_value(fact.get("p95_latency_ms"), 0.0)
@@ -355,7 +522,14 @@ def _heatmap_severity(fact: Dict[str, Any]) -> str:
 
 
 def _heatmap_card_from_fact(fact: Dict[str, Any]) -> HeatmapCard:
-    """Build one deterministic heatmap card."""
+    """Выполняет вспомогательную операцию для тепловой карты, карточки.
+    
+    Args:
+        fact (Dict[str, Any]): Нормализованный факт анализа, из которого строится карточка или оценка.
+    
+    Returns:
+        HeatmapCard: Детерминированная карточка горячего бакета с компонентом, операцией, qps, ошибками, задержкой и evidence.
+    """
     operation = _clip_text(fact.get("operation", "unknown"), 220)
     bucket = _clip_text(fact.get("bucket_start", ""), 80)
     hits = _int_value(fact.get("hits"))
@@ -387,7 +561,15 @@ def _heatmap_card_from_fact(fact: Dict[str, Any]) -> HeatmapCard:
 
 
 def _build_heatmap_result(input_context: AgentInputContext, config: AgentModelConfig) -> AgentResult:
-    """Build deterministic structured interpretation for heatmap."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: тепловой карты.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+        config (AgentModelConfig): Конфигурация запуска или внешнего провайдера, влияющая на поведение функции.
+    
+    Returns:
+        AgentResult: Структурированный агентский результат с общим статусом, уверенностью, карточками, выводами и рекомендациями.
+    """
     facts = _as_dict(input_context.facts)
     hotspots = _as_list(facts.get("hotspots"), MAX_HEATMAP_CARDS)
     cards = [_heatmap_card_from_fact(_as_dict(item)) for item in hotspots]
@@ -428,7 +610,14 @@ def _build_heatmap_result(input_context: AgentInputContext, config: AgentModelCo
 
 
 def _traffic_severity(fact: Dict[str, Any]) -> str:
-    """Derive traffic severity from anomaly or endpoint facts."""
+    """Выполняет вспомогательную операцию для трафика, серьезности.
+    
+    Args:
+        fact (Dict[str, Any]): Нормализованный факт анализа, из которого строится карточка или оценка.
+    
+    Returns:
+        str: Нормализованный уровень серьезности, допустимый для публичного результата.
+    """
     explicit = str(fact.get("severity") or "").lower()
     if explicit in _SEVERITIES:
         return explicit
@@ -447,7 +636,14 @@ def _traffic_severity(fact: Dict[str, Any]) -> str:
 
 
 def _traffic_card_from_anomaly(fact: Dict[str, Any]) -> TrafficCard:
-    """Build one deterministic traffic card from an anomaly fact."""
+    """Выполняет вспомогательную операцию для трафика, карточки.
+    
+    Args:
+        fact (Dict[str, Any]): Нормализованный факт анализа, из которого строится карточка или оценка.
+    
+    Returns:
+        TrafficCard: Карточка аномалии трафика, построенная из suspicious_patterns с HTTP/IP-полями и рекомендациями.
+    """
     payload = _as_dict(fact.get("payload"))
     method = _clip_text(payload.get("method", ""), 32)
     path = _clip_text(payload.get("path", ""), 220)
@@ -476,7 +672,14 @@ def _traffic_card_from_anomaly(fact: Dict[str, Any]) -> TrafficCard:
 
 
 def _traffic_card_from_row(fact: Dict[str, Any]) -> TrafficCard:
-    """Build one deterministic traffic card from an aggregate endpoint row."""
+    """Выполняет вспомогательную операцию для трафика, карточки, строки.
+    
+    Args:
+        fact (Dict[str, Any]): Нормализованный факт анализа, из которого строится карточка или оценка.
+    
+    Returns:
+        TrafficCard: Карточка строки трафика, построенная из агрегата endpoint/status с частотой, ошибками и p95 задержки.
+    """
     method = _clip_text(fact.get("method", "UNKNOWN"), 32)
     path = _clip_text(fact.get("path", "unknown"), 220)
     status = _optional_int(fact.get("http_status"))
@@ -510,7 +713,15 @@ def _traffic_card_from_row(fact: Dict[str, Any]) -> TrafficCard:
 
 
 def _build_traffic_result(input_context: AgentInputContext, config: AgentModelConfig) -> AgentResult:
-    """Build deterministic structured interpretation for traffic."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: трафика.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+        config (AgentModelConfig): Конфигурация запуска или внешнего провайдера, влияющая на поведение функции.
+    
+    Returns:
+        AgentResult: Структурированный агентский результат с общим статусом, уверенностью, карточками, выводами и рекомендациями.
+    """
     facts = _as_dict(input_context.facts)
     patterns = _as_list(facts.get("suspicious_patterns"), MAX_TRAFFIC_CARDS)
     cards: List[TrafficCard] = [_traffic_card_from_anomaly(_as_dict(item)) for item in patterns]
@@ -557,7 +768,18 @@ def _build_traffic_result(input_context: AgentInputContext, config: AgentModelCo
 
 
 def _build_deterministic_result(input_context: AgentInputContext, config: AgentModelConfig) -> AgentResult:
-    """Build structured output without an LLM call."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+        config (AgentModelConfig): Конфигурация запуска или внешнего провайдера, влияющая на поведение функции.
+    
+    Returns:
+        AgentResult: Структурированный агентский результат с общим статусом, уверенностью, карточками, выводами и рекомендациями.
+    
+    Raises:
+        ValueError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if input_context.profile == "incidents":
         return _build_incidents_result(input_context, config)
     if input_context.profile == "heatmap":
@@ -568,7 +790,14 @@ def _build_deterministic_result(input_context: AgentInputContext, config: AgentM
 
 
 def _fallback_card_facts(input_context: AgentInputContext) -> List[Dict[str, Any]]:
-    """Return deterministic card facts in the same order used for fallback cards."""
+    """Выполняет вспомогательную операцию для резервного сценария, карточки, фактов.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+    
+    Returns:
+        List[Dict[str, Any]]: Список словарей с нормализованными фактами или строками отчета.
+    """
     facts = _as_dict(input_context.facts)
     if input_context.profile == "incidents":
         return [_as_dict(item) for item in _as_list(facts.get("compact_llm_ready_cluster_facts"), MAX_INCIDENT_CARDS)]
@@ -583,7 +812,14 @@ def _fallback_card_facts(input_context: AgentInputContext) -> List[Dict[str, Any
 
 
 def _fallback_by_card_key(input_context: AgentInputContext) -> Dict[str, Dict[str, Any]]:
-    """Build profile-specific fallback facts for LLM card validation."""
+    """Выполняет вспомогательную операцию для резервного сценария, карточки.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+    
+    Returns:
+        Dict[str, Dict[str, Any]]: Индекс fallback-фактов карточек по устойчивому ключу, чтобы сопоставлять ответ модели с детерминированными данными.
+    """
     facts = _as_dict(input_context.facts)
     if input_context.profile == "incidents":
         return {
@@ -608,7 +844,14 @@ def _fallback_by_card_key(input_context: AgentInputContext) -> Dict[str, Dict[st
 
 
 def _has_fact_value(value: Any) -> bool:
-    """Return whether a deterministic scalar fact is present."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        bool: True, если проверяемое значение содержит требуемый признак; иначе False.
+    """
     if value is None or value == "" or value == []:
         return False
     if isinstance(value, (int, float)) and not isinstance(value, bool):
@@ -617,7 +860,15 @@ def _has_fact_value(value: Any) -> bool:
 
 
 def _merge_card_payload(fallback: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, Any]:
-    """Merge LLM text with deterministic facts without letting empty model fields erase facts."""
+    """Выполняет вспомогательную операцию для карточки, полезной нагрузки.
+    
+    Args:
+        fallback (Dict[str, Any]): Резервные детерминированные данные, используемые при неполном ответе модели.
+        payload (Dict[str, Any]): Словарь с исходными или уже подготовленными данными для преобразования.
+    
+    Returns:
+        Dict[str, Any]: Полезная нагрузка карточки, где пустые поля ответа модели заполнены fallback-значениями.
+    """
     merged = dict(fallback)
     for key, value in payload.items():
         if value is None or value == "" or value == []:
@@ -688,7 +939,15 @@ def _grounded_list(value: Any, deterministic: List[str], anchors: List[str], lim
 
 
 def _validate_incident_card(payload: Dict[str, Any], fallback: Dict[str, Any]) -> IncidentCard:
-    """Validate one LLM-produced incident card."""
+    """Проверяет внутреннюю структуру данных и приводит ее к ожидаемому контракту. Область применения: инцидента, карточки.
+    
+    Args:
+        payload (Dict[str, Any]): Словарь с исходными или уже подготовленными данными для преобразования.
+        fallback (Dict[str, Any]): Резервные детерминированные данные, используемые при неполном ответе модели.
+    
+    Returns:
+        IncidentCard: Валидированная карточка с заполнением отсутствующих полей из fallback-данных.
+    """
     merged = _merge_card_payload(fallback, payload)
     deterministic = _incident_card_from_fact(merged)
     anchors = _card_text_anchors("incidents", merged)
@@ -710,7 +969,15 @@ def _validate_incident_card(payload: Dict[str, Any], fallback: Dict[str, Any]) -
 
 
 def _validate_heatmap_card(payload: Dict[str, Any], fallback: Dict[str, Any]) -> HeatmapCard:
-    """Validate one LLM-produced heatmap card."""
+    """Проверяет внутреннюю структуру данных и приводит ее к ожидаемому контракту. Область применения: тепловой карты, карточки.
+    
+    Args:
+        payload (Dict[str, Any]): Словарь с исходными или уже подготовленными данными для преобразования.
+        fallback (Dict[str, Any]): Резервные детерминированные данные, используемые при неполном ответе модели.
+    
+    Returns:
+        HeatmapCard: Валидированная карточка с заполнением отсутствующих полей из fallback-данных.
+    """
     merged = _merge_card_payload(fallback, payload)
     deterministic = _heatmap_card_from_fact(merged)
     anchors = _card_text_anchors("heatmap", merged)
@@ -732,7 +999,15 @@ def _validate_heatmap_card(payload: Dict[str, Any], fallback: Dict[str, Any]) ->
 
 
 def _validate_traffic_card(payload: Dict[str, Any], fallback: Dict[str, Any]) -> TrafficCard:
-    """Validate one LLM-produced traffic card."""
+    """Проверяет внутреннюю структуру данных и приводит ее к ожидаемому контракту. Область применения: трафика, карточки.
+    
+    Args:
+        payload (Dict[str, Any]): Словарь с исходными или уже подготовленными данными для преобразования.
+        fallback (Dict[str, Any]): Резервные детерминированные данные, используемые при неполном ответе модели.
+    
+    Returns:
+        TrafficCard: Валидированная карточка с заполнением отсутствующих полей из fallback-данных.
+    """
     merged = _merge_card_payload(fallback, payload)
     deterministic = (
         _traffic_card_from_anomaly(merged)
@@ -759,7 +1034,14 @@ def _validate_traffic_card(payload: Dict[str, Any], fallback: Dict[str, Any]) ->
 
 
 def _missing_card_text_counts(cards: List[Any]) -> Dict[str, int]:
-    """Count cards with missing human-facing text sections."""
+    """Выполняет вспомогательную операцию для карточки.
+    
+    Args:
+        cards (List[Any]): Список карточек выводов, из которых формируется публичный результат.
+    
+    Returns:
+        Dict[str, int]: Счетчики карточек с пустыми summary, evidence и recommended_actions.
+    """
     return {
         "empty_summary": sum(1 for card in cards if not _clip_text(getattr(card, "summary", ""))),
         "empty_evidence": sum(1 for card in cards if not getattr(card, "evidence", [])),
@@ -768,7 +1050,14 @@ def _missing_card_text_counts(cards: List[Any]) -> Dict[str, int]:
 
 
 def _dedupe_strings(values: List[str]) -> List[str]:
-    """Deduplicate short text lists while preserving order."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        values (List[str]): Набор входных значений, используемых при вычислении результата.
+    
+    Returns:
+        List[str]: Список строк без дублей и пустых значений с сохранением исходного порядка.
+    """
     seen = set()
     result = []
     for value in values:
@@ -781,7 +1070,15 @@ def _dedupe_strings(values: List[str]) -> List[str]:
 
 
 def _llm_payload_quality_gaps(payload: Dict[str, Any], cards_payload: List[Any]) -> Dict[str, Any]:
-    """Return bounded diagnostics for incomplete but JSON-valid LLM payloads."""
+    """Выполняет вспомогательную операцию для полезной нагрузки, качества.
+    
+    Args:
+        payload (Dict[str, Any]): Словарь с исходными или уже подготовленными данными для преобразования.
+        cards_payload (List[Any]): Словарь с исходными или уже подготовленными данными для преобразования.
+    
+    Returns:
+        Dict[str, Any]: Диагностика пропусков в ответе модели: отсутствующие верхнеуровневые поля и незаполненные секции карточек.
+    """
     missing_top_fields = [
         field
         for field in ("short_summary", "technical_summary", "business_summary")
@@ -807,13 +1104,27 @@ def _llm_payload_quality_gaps(payload: Dict[str, Any], cards_payload: List[Any])
 
 
 def _has_llm_payload_quality_gaps(gaps: Dict[str, Any]) -> bool:
-    """Return whether an LLM payload needs deterministic repair."""
+    """Выполняет вспомогательную операцию для полезной нагрузки, качества.
+    
+    Args:
+        gaps (Dict[str, Any]): Значение `gaps`, используемое функцией при выполнении операции.
+    
+    Returns:
+        bool: True, если проверяемое значение содержит требуемый признак; иначе False.
+    """
     card_gaps = _as_dict(gaps.get("card_gaps"))
     return bool(gaps.get("missing_top_fields") or any(_int_value(value) for value in card_gaps.values()))
 
 
 def _agent_context_shape(input_context: AgentInputContext) -> Dict[str, Any]:
-    """Return small diagnostics for the compact facts payload."""
+    """Выполняет вспомогательную операцию для агентского этапа.
+    
+    Args:
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+    
+    Returns:
+        Dict[str, Any]: Краткая форма контекста агента для логов: ключи facts и размеры профильных списков.
+    """
     facts = _as_dict(input_context.facts)
     shape: Dict[str, Any] = {
         "facts_keys": sorted(facts.keys()),
@@ -835,7 +1146,19 @@ def validate_agent_result_payload(
     input_context: AgentInputContext,
     config: AgentModelConfig,
 ) -> AgentResult:
-    """Validate one structured LLM payload into the public `AgentResult` contract."""
+    """Проверяет структуру данных и приводит ее к ожидаемому контракту. Область применения: агентского этапа, полезной нагрузки.
+    
+    Args:
+        payload (Dict[str, Any]): Словарь с исходными или уже подготовленными данными для преобразования.
+        input_context (AgentInputContext): Структурированный контекст для агентского этапа с фактами, диагностикой и сводками.
+        config (AgentModelConfig): Конфигурация запуска или внешнего провайдера, влияющая на поведение функции.
+    
+    Returns:
+        AgentResult: Проверенный агентский результат, приведенный к внутреннему контракту карточек и сводок.
+    
+    Raises:
+        ValueError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if not isinstance(payload, dict):
         raise ValueError("Agent LLM payload must be a JSON object.")
     profile = _clip_text(payload.get("profile") or input_context.profile, 40)
@@ -998,7 +1321,17 @@ def validate_agent_result_payload(
 
 
 def _extract_json_object(content: str) -> Dict[str, Any]:
-    """Parse a JSON object from a model response, tolerating fenced JSON."""
+    """Извлекает из внутреннего значения значимые признаки или структурированные данные. Область применения: JSON.
+    
+    Args:
+        content (str): Текстовый ответ внешней модели или содержимое, из которого извлекаются данные.
+    
+    Returns:
+        Dict[str, Any]: Первый JSON-объект, извлеченный из текста ответа модели; пустой словарь при ошибке разбора.
+    
+    Raises:
+        ValueError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     text = content.strip()
     if text.startswith("```"):
         lines = [line for line in text.splitlines() if not line.strip().startswith("```")]
@@ -1017,7 +1350,14 @@ def _extract_json_object(content: str) -> Dict[str, Any]:
 
 
 def _message_content(value: Any) -> str:
-    """Extract text from OpenAI-like message content shapes."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
+    Returns:
+        str: Текстовое содержимое сообщения модели, извлеченное из разных вариантов структуры ответа.
+    """
     if isinstance(value, str):
         return value
     if isinstance(value, list):
@@ -1032,7 +1372,19 @@ def _message_content(value: Any) -> str:
 
 
 def _invoke_structured_llm(config: AgentModelConfig, messages: List[Dict[str, str]]) -> Dict[str, Any]:
-    """Call one OpenAI-compatible chat-completions endpoint and parse JSON."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        config (AgentModelConfig): Конфигурация запуска или внешнего провайдера, влияющая на поведение функции.
+        messages (List[Dict[str, str]]): Список сообщений, передаваемых внешней языковой модели.
+    
+    Returns:
+        Dict[str, Any]: JSON-полезная нагрузка, полученная от внешней модели после HTTP-вызова и разбора ответа.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+        ValueError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if not provider_is_configured(config):
         raise RuntimeError(f"Agent provider {config.provider} is not configured.")
     url = config.base_url.rstrip("/")
@@ -1127,7 +1479,17 @@ def _invoke_structured_llm(config: AgentModelConfig, messages: List[Dict[str, st
 
 
 def run_agent_stage(context: PipelineContext) -> PipelineContext:
-    """Run one profile-aware structured agent stage over compact deterministic facts."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: агентского этапа.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_agent_stage`.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     _ensure_agent_logging()
     input_context = context.agent_input_context
     if input_context is None:
@@ -1235,7 +1597,14 @@ def run_agent_stage(context: PipelineContext) -> PipelineContext:
 
 
 def build_agent_summary(result: AgentResult) -> Dict[str, Any]:
-    """Build the compact agent summary persisted in `run_summary.json`."""
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки. Область применения: агентского этапа, сводки.
+    
+    Args:
+        result (AgentResult): Результат выполнения конвейера или промежуточного этапа, из которого берутся данные.
+    
+    Returns:
+        Dict[str, Any]: Короткая сводка агентского результата для run_summary: статус, уверенность, счетчики карточек, выводов и ограничений.
+    """
     return {
         "overall_status": result.overall_status,
         "confidence": round(float(result.confidence), 3),
@@ -1251,7 +1620,17 @@ def build_agent_summary(result: AgentResult) -> Dict[str, Any]:
 
 
 def _update_agent_run_outputs(context: PipelineContext) -> PipelineContext:
-    """Update in-memory run summary after the structured agent result is built."""
+    """Выполняет вспомогательную операцию для агентского этапа.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Контекст конвейера с результатами выполненного этапа и обновленными промежуточными данными.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if context.run_summary is None:
         raise RuntimeError("Run summary must exist before agent pipeline output updates.")
     agent_result = context.agent_result
@@ -1267,7 +1646,14 @@ def _update_agent_run_outputs(context: PipelineContext) -> PipelineContext:
 
 
 def run_agent_pipeline(context: PipelineContext) -> PipelineContext:
-    """Run the complete mandatory interpretation stage over deterministic profile outputs."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: агентского этапа, конвейера.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_agent_pipeline`.
+    """
     _ensure_agent_logging()
     context = build_agent_input_context(context)
     context = run_agent_stage(context)

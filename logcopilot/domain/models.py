@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Domain dataclasses for raw events, enriched events, clusters and run results."""
+"""Датаклассы предметной области для сырых событий, обогащенных событий, кластеров и результатов запуска."""
 
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 @dataclass
 class FindingCard:
-    """Product-level finding card returned by every completed pipeline run."""
+    """Продуктовая карточка вывода, возвращаемая каждым завершенным запуском конвейера."""
 
     card_type: str
     title: str
@@ -23,7 +23,14 @@ class FindingCard:
     payload: Dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> Dict[str, Any]:
-        """Return a JSON-ready finding card payload."""
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            dict: Словарь с полями объекта, пригодный для сериализации и записи в артефакты.
+        """
         return {
             "card_type": self.card_type,
             "title": self.title,
@@ -40,7 +47,7 @@ class FindingCard:
 
 @dataclass
 class ExecutionQuality:
-    """Validation result for how trustworthy and useful one pipeline run is."""
+    """Результат валидации надежности и полезности одного запуска конвейера."""
 
     status: str
     score: float
@@ -49,7 +56,14 @@ class ExecutionQuality:
     recommendations: List[str] = field(default_factory=list)
 
     def as_dict(self) -> Dict[str, Any]:
-        """Return a JSON-ready execution quality payload."""
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            dict: Словарь с полями объекта, пригодный для сериализации и записи в артефакты.
+        """
         return {
             "status": self.status,
             "score": round(float(self.score), 3),
@@ -61,7 +75,7 @@ class ExecutionQuality:
 
 @dataclass
 class RunSummary:
-    """Product-level summary returned by every completed pipeline run."""
+    """Продуктовая сводка, возвращаемая каждым завершенным запуском конвейера."""
 
     run_id: str
     profile: str
@@ -80,7 +94,14 @@ class RunSummary:
     quality: Dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> Dict[str, Any]:
-        """Return a JSON-ready product summary payload."""
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            dict: Словарь с полями объекта, пригодный для сериализации и записи в артефакты.
+        """
         return {
             "run_id": self.run_id,
             "profile": self.profile,
@@ -102,7 +123,7 @@ class RunSummary:
 
 @dataclass
 class RawEvent:
-    """Raw parsed log event before canonical enrichment and signature generation."""
+    """Сырое разобранное событие лога до канонического обогащения и построения сигнатуры."""
 
     source_file: str
     parser_profile: str
@@ -128,7 +149,7 @@ class RawEvent:
 
 @dataclass
 class Event:
-    """Canonical enriched event used by profiles, reports and storage."""
+    """Каноническое обогащенное событие, используемое профилями, отчетами и хранилищем."""
 
     event_id: str
     source_file: str
@@ -162,7 +183,7 @@ class Event:
 
 @dataclass
 class ClusterSummary:
-    """Signature-based cluster summary for grouped incident-like events."""
+    """Сводка кластера на основе сигнатур для сгруппированных событий, похожих на инциденты."""
 
     cluster_id: str
     hits: int
@@ -185,7 +206,7 @@ class ClusterSummary:
 
 @dataclass
 class SemanticClusterSummary:
-    """Semantic grouping summary built from representative signature events."""
+    """Сводка семантической группировки, построенная по представительным событиям сигнатур."""
 
     semantic_cluster_id: int
     signature_hash: str
@@ -197,7 +218,7 @@ class SemanticClusterSummary:
 
 @dataclass
 class AnalysisSummary:
-    """Coverage and signal quality metrics for one analyzed source."""
+    """Метрики покрытия и качества сигнала для одного анализируемого источника."""
 
     source_name: str
     event_count: int
@@ -223,7 +244,7 @@ class AnalysisSummary:
 
 @dataclass
 class RunResult:
-    """Modern pipeline run result with product output and final persisted files."""
+    """Современный результат запуска конвейера с продуктовым выводом и итоговыми сохраненными файлами."""
 
     run_id: str
     profile: str

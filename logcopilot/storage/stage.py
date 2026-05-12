@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Pipeline stage entrypoints for storage writes."""
+"""Точки входа этапов конвейера для записи в хранилище."""
 
 import logging
 from pathlib import Path
@@ -25,7 +25,17 @@ _ARTIFACT_TYPES_BY_NAME = {
 
 
 def ensure_single_log_file(input_path: Path) -> Path:
-    """Validate that the run input is a single `.log` file."""
+    """Проверяет или подготавливает ресурс, необходимый для корректного выполнения этапа. Область применения: лога, файла.
+    
+    Args:
+        input_path (Path): Путь к входному файлу или директории с логами.
+    
+    Returns:
+        Path: Проверенный путь к существующему `.log` файлу.
+    
+    Raises:
+        ValueError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if input_path.is_file():
         if input_path.suffix.lower() != ".log":
             raise ValueError("MVP accepts a single .log file as input.")
@@ -34,7 +44,14 @@ def ensure_single_log_file(input_path: Path) -> Path:
 
 
 def clean_output_dir(output_path: Path) -> None:
-    """Remove all files and directories from an existing run output directory."""
+    """Очищает или подготавливает директорию перед записью новых результатов.
+
+    Args:
+        output_path (Path): Путь к директории или файлу для записи результата.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     if not output_path.exists():
         return
     for child in output_path.iterdir():
@@ -45,7 +62,15 @@ def clean_output_dir(output_path: Path) -> None:
 
 
 def _resolve_output_paths(out_dir: str | None, run_id: str) -> tuple[Path, Path]:
-    """Resolve the base output directory and create the run-specific directory."""
+    """Выполняет вспомогательную операцию для логики проекта.
+    
+    Args:
+        out_dir (str | None): Базовая директория, куда записываются результаты выполнения.
+        run_id (str): Идентификатор запуска, связывающий записи, артефакты и сводки.
+    
+    Returns:
+        tuple[Path, Path]: Пара путей `(base_output_dir, run_dir)` для общей директории вывода и конкретного запуска.
+    """
     base_dir = Path(out_dir or "out").expanduser().resolve()
     run_dir = base_dir / "runs" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -53,7 +78,14 @@ def _resolve_output_paths(out_dir: str | None, run_id: str) -> tuple[Path, Path]
 
 
 def _artifact_type_for_path(artifact_path: str) -> str:
-    """Infer the registered artifact type from its file extension."""
+    """Выполняет вспомогательную операцию для артефакта, пути.
+    
+    Args:
+        artifact_path (str): Путь к артефакту, для которого определяется тип или выполняется регистрация.
+    
+    Returns:
+        str: Тип артефакта по расширению файла: json, csv, markdown, parquet или file.
+    """
     if artifact_path.endswith(".png"):
         return "chart"
     if artifact_path.endswith(".md"):
@@ -64,14 +96,29 @@ def _artifact_type_for_path(artifact_path: str) -> str:
 
 
 def _current_event_count(context: PipelineContext) -> int:
-    """Return the best available event count for lifecycle status updates."""
+    """Выполняет вспомогательную операцию для события.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        int: Текущее количество построенных или распарсенных событий в контексте конвейера.
+    """
     if context.event_build_result is not None:
         return context.event_build_result.event_count
     return len(context.events)
 
 
 def _build_failed_run_summary(context: PipelineContext, error: BaseException) -> dict:
-    """Build a compact failure payload for storage lifecycle completion."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: сводки.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+        error (BaseException): Исключение, по которому строится информация о неуспешном запуске.
+    
+    Returns:
+        dict: JSON-совместимая сводка неуспешного запуска с типом ошибки, сообщением и количеством событий.
+    """
     return {
         "run_id": context.run_id,
         "profile": context.config.profile,
@@ -92,14 +139,13 @@ def _build_failed_run_summary(context: PipelineContext, error: BaseException) ->
 
 
 def run_start_run(config: PipelineConfig) -> PipelineContext:
-    """
-    Подготавливает новый запуск пайплайна.
-
-    Проверяет входной лог-файл, создает run_id, директорию вывода,
-    SQLite-репозиторий и начальный контекст для следующих стадий.
-
-    :param config: настройки запуска пайплайна
-    :return: начальный контекст пайплайна
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы.
+    
+    Args:
+        config (PipelineConfig): Конфигурация запуска или внешнего провайдера, влияющая на поведение функции.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_start_run`.
     """
     input_path_obj = ensure_single_log_file(config.input_path.resolve()) # проверяем входной лог-файл
     run_id = uuid.uuid4().hex                                            # уникальный id запуска
@@ -124,7 +170,15 @@ def run_start_run(config: PipelineConfig) -> PipelineContext:
 
 
 def _flush_event_batch(repository: StorageRepository, batch: List) -> float:
-    """Persist a pending batch of events and clear the in-memory buffer."""
+    """Выполняет вспомогательную операцию для события.
+    
+    Args:
+        repository (StorageRepository): Значение `repository`, используемое функцией при выполнении операции.
+        batch (List): Значение `batch`, используемое функцией при выполнении операции.
+    
+    Returns:
+        float: Количество секунд, потраченное на запись переданного батча событий в хранилище.
+    """
     if not batch:
         return 0.0
     started = time.perf_counter()
@@ -136,7 +190,17 @@ def _flush_event_batch(repository: StorageRepository, batch: List) -> float:
 
 
 def run_store_events(context: PipelineContext) -> PipelineContext:
-    """Persist built events for the current pipeline run."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: событий.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_store_events`.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if context.event_build_result is None:
         raise RuntimeError("Event building must run before event storage.")
 
@@ -163,7 +227,18 @@ def run_store_events(context: PipelineContext) -> PipelineContext:
 
 
 def run_store_aggregates(context: PipelineContext) -> PipelineContext:
-    """Persist profile aggregate rows for the current pipeline run."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_store_aggregates`.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+        ValueError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     profile_result = context.profile_result
     if profile_result is None:
         raise RuntimeError("Profile computation must run before aggregate storage.")
@@ -199,7 +274,17 @@ def run_store_aggregates(context: PipelineContext) -> PipelineContext:
 
 
 def run_register_artifacts(context: PipelineContext) -> PipelineContext:
-    """Register generated artifact metadata for the current pipeline run."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: артефактов.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_register_artifacts`.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if not context.artifact_paths:
         raise RuntimeError("Artifact metadata must be built before artifact registration.")
 
@@ -223,7 +308,17 @@ def run_register_artifacts(context: PipelineContext) -> PipelineContext:
 
 
 def run_store_agent_result(context: PipelineContext) -> PipelineContext:
-    """Persist agent result metadata and register agent-generated artifacts."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы. Область применения: агентского этапа.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_store_agent_result`.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     agent_result = context.agent_result
     if agent_result is None or not agent_result.enabled:
         return context
@@ -248,7 +343,17 @@ def run_store_agent_result(context: PipelineContext) -> PipelineContext:
 
 
 def run_finalize_run(context: PipelineContext) -> PipelineContext:
-    """Mark the current pipeline run as completed in storage."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_finalize_run`.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
+    """
     if context.run_summary is None:
         raise RuntimeError("Run summary must be built before run finalization.")
 
@@ -268,7 +373,15 @@ def run_finalize_run(context: PipelineContext) -> PipelineContext:
 
 
 def run_fail_run(context: PipelineContext, error: BaseException) -> PipelineContext:
-    """Mark the current pipeline run as failed after a critical stage error."""
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+        error (BaseException): Исключение, по которому строится информация о неуспешном запуске.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_fail_run`.
+    """
     failure_summary = _build_failed_run_summary(context, error)
     context.run_summary = failure_summary
     event_count = _current_event_count(context)

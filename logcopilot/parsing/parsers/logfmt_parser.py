@@ -5,11 +5,19 @@ from ..utils import build_event_from_mapping, build_generic_event, non_empty_lin
 
 
 class LogfmtParser(BaseParser):
-    """Parser for logfmt or generic key=value lines."""
+    """Парсер строк logfmt или общих строк вида ключ=значение."""
 
     name = "logfmt"
 
     def can_parse(self, sample: str) -> float:
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            sample (str): Образец текста лога, по которому оценивается применимость парсера.
+
+        Returns:
+            float: Оценка уверенности от 0.0 до 1.0, показывающая насколько парсер подходит для текста.
+        """
         lines = non_empty_lines(sample)
         if not lines:
             return 0.0
@@ -24,6 +32,15 @@ class LogfmtParser(BaseParser):
         return sum(scores) / len(scores)
 
     def parse(self, text: str, source: str | None = None):
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            text (str): Текстовое содержимое лога или фрагмент строки, которое анализируется функцией.
+            source (str | None, optional): Имя источника или файла, из которого получена запись лога.
+
+        Returns:
+            ParseResult: Результат парсинга с событиями, диагностикой и предупреждениями.
+        """
         events = []
         warnings: list[str] = []
         fallback_events = 0
@@ -56,6 +73,14 @@ class LogfmtParser(BaseParser):
 
 
 def parse_logfmt_pairs_with_spans(line: str):
+    """Разбирает входные данные и преобразует их в структурированный результат.
+    
+    Args:
+        line (str): Одна строка лога, которую нужно разобрать или проверить.
+    
+    Returns:
+        Any: Пары `key=value` вместе с позициями совпадений, чтобы восстановить сообщение вне logfmt-полей.
+    """
     from ..utils import LOGFMT_RE
 
     return list(LOGFMT_RE.finditer(line))

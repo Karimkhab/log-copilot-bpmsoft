@@ -20,6 +20,14 @@ from logcopilot.parsing.pipeline import canonical_to_raw_event
 
 class ParserSubsystemTests(unittest.TestCase):
     def test_json_logs_parser_preserves_unknown_fields(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: JSON, логов, парсера.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         parser = JsonParser()
         content = (
             '{"timestamp":"2026-03-11T08:21:15Z","level":"error","message":"boom",'
@@ -38,6 +46,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertGreater(result.confidence, 0.7)
 
     def test_json_parser_degrades_on_dirty_input(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: JSON, парсера.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         parser = JsonParser()
         content = '{"message":"ok","level":"info"}\nnot-json\n'
 
@@ -49,6 +65,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertTrue(result.warnings)
 
     def test_logfmt_parser_maps_known_fields_and_keeps_rest(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: парсера.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         parser = LogfmtParser()
         content = 'time=2026-03-11T08:21:15Z level=warn msg="cache miss" request_id=req-7 foo=bar latency=12ms\n'
 
@@ -62,6 +86,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertEqual({"foo": "bar"}, event.attributes)
 
     def test_web_access_parser_extracts_request_fields(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: access-лога, парсера.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         parser = WebAccessParser()
         content = '127.0.0.1 - - [11/Mar/2026:08:21:15 +0000] "GET /api/orders HTTP/1.1" 200 321 "-" "curl/8.0" request_time=0.245\n'
 
@@ -94,6 +126,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertEqual(129, event.response_size)
 
     def test_syslog_parser_extracts_host_component_and_message(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: syslog, парсера.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         parser = SyslogParser()
         content = "Mar 11 08:21:15 host1 sshd[123]: ERROR Failed password for invalid user root from 192.0.2.10 port 2222 ssh2\n"
 
@@ -107,6 +147,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertEqual("192.0.2.10", event.client_ip)
 
     def test_windows_servicing_parser_extracts_level_component_and_csi_prefix(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: Windows servicing, парсера, уровня логирования.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         parser = WindowsServicingParser()
         content = (
             "2016-09-28 04:30:31, Info                  CSI    "
@@ -126,6 +174,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertGreater(result.confidence, 0.8)
 
     def test_text_multiline_parser_groups_java_and_stacktrace(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: парсера.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         parser = TextMultilineParser()
         content = """17/06/09 20:10:42 ERROR executor.CoarseGrainedExecutorBackend: Executor lost due to IOException
    at org.apache.spark.Executor.run(Executor.scala:123)
@@ -140,6 +196,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertEqual(1, result.stats["multiline_events_count"])
 
     def test_generic_fallback_parser_is_conservative(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: резервного сценария, парсера.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         parser = GenericFallbackParser()
         content = "weird custom line\n  still same blob\n\nnext blob\n"
 
@@ -151,6 +215,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertEqual(1.0, result.stats["fallback_ratio"])
 
     def test_generic_fallback_extracts_minimal_structure_without_claiming_full_parse(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: резервного сценария.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            ParseResult: Результат парсинга с событиями, диагностикой и предупреждениями.
+        """
         parser = GenericFallbackParser()
         content = "2026-03-11 08:21:15 ERROR Worker - sync failed request_id=req-7 status=500\n"
 
@@ -164,6 +236,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertLessEqual(event.parser_confidence, 0.5)
 
     def test_registry_selection_prefers_structured_parser_and_uses_fallback(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: парсера, резервного сценария.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         registry = build_default_registry()
         parser, selection = registry.select('{"message":"ok","level":"info"}\n')
         self.assertEqual("json", parser.name)
@@ -174,6 +254,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertTrue(selection.used_fallback)
 
     def test_registry_selection_prefers_web_access_for_common_access_lines(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: access-лога, access-лога.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         registry = build_default_registry()
         parser, selection = registry.select(
             '199.60.47.128 - - [01/Jan/2016:00:25:53 +0100] '
@@ -194,11 +282,27 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertFalse(selection.used_fallback)
 
     def test_confidence_scoring_favors_structured_parse_over_generic(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: уверенности.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         structured = JsonParser().parse('{"timestamp":"2026-03-11T08:21:15Z","level":"info","message":"ok"}\n')
         generic = GenericFallbackParser().parse("just some raw text\n")
         self.assertGreater(structured.confidence, generic.confidence)
 
     def test_compatibility_iter_events_returns_raw_event_adapter(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: событий, события.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = "2026-03-11 08:21:15 INFO Gateway - GET /api/orders status=500 latency=1450ms size=3210 ip=10.0.0.8 user-agent=Mozilla/5.0\n"
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -214,6 +318,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertGreater(events[0].parser_confidence, 0.5)
 
     def test_parse_file_exposes_parse_result_stats(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: файла.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         content = "foo=bar message=test level=info\n"
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -242,6 +354,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertEqual(1, result.stats["total_events"])
 
     def test_profile_fit_prefers_traffic_for_access_logs(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: профиля, трафика, access-лога.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         parser = WebAccessParser()
         content = (
             '199.60.47.128 - - [01/Jan/2016:00:25:53 +0100] "GET http://example.com/login HTTP/1.1" 302 0\n'
@@ -256,6 +376,14 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertEqual("low", fit["fit_label"])
 
     def test_profile_fit_prefers_incidents_for_windows_servicing_errors(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте. Область применения: профиля, инцидентов, Windows servicing.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         parser = WindowsServicingParser()
         content = (
             "2016-09-28 04:30:31, Info                  CBS    Expecting attribute name "

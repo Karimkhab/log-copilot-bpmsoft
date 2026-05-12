@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Output writers for CSV, JSON, Markdown and optional Parquet artifacts."""
+"""Писатели выходных артефактов CSV, JSON, Markdown и опционального Parquet."""
 
 import csv
 from contextlib import contextmanager
@@ -44,7 +44,16 @@ _EVENT_FIELDNAMES = [
 
 
 def _write_csv_rows(path: Path, fieldnames: list[str], rows: Iterable[dict[str, Any]]) -> None:
-    """Write a sequence of row dictionaries to a CSV file."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера. Область применения: CSV, строк.
+
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        fieldnames (list[str]): Порядок и имена колонок, используемые при записи CSV-файла.
+        rows (Iterable[dict[str, Any]]): Строки табличных данных, которые нужно записать, агрегировать или проверить.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
@@ -53,30 +62,38 @@ def _write_csv_rows(path: Path, fieldnames: list[str], rows: Iterable[dict[str, 
 
 
 def _write_json(path: Path, payload: Any) -> None:
-    """Write a JSON payload using the project's default formatting."""
+    """Записывает внутренний файл или артефакт, используемый отчетностью конвейера. Область применения: JSON.
+
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        payload (Any): Словарь с исходными или уже подготовленными данными для преобразования.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def format_timestamp(value: Any) -> str:
-    """Format an optional timestamp value for artifact output.
-
+    """Преобразует значение в строковое представление для отчетов или вывода. Область применения: временной метки.
+    
     Args:
-        value: Timestamp-like object with `isoformat`, or `None`.
-
+        value (Any): Входное значение, которое нужно проверить, преобразовать или нормализовать.
+    
     Returns:
-        ISO-formatted timestamp string, or an empty string.
+        str: ISO-строка временной метки; пустая строка, если значение отсутствует.
     """
     return value.isoformat(sep=" ") if value else ""
 
 
 def event_to_row(event: Event) -> dict:
-    """Convert one canonical event into a CSV/JSON-friendly row.
-
+    """Выполняет вспомогательную операцию для события, строки.
+    
     Args:
-        event: Canonical event to serialize.
-
+        event (Event): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
+    
     Returns:
-        Serializable row dictionary.
+        dict: CSV-строка события с основными полями, HTTP-атрибутами и сериализованными дополнительными данными.
     """
     return {
         "event_id": event.event_id,
@@ -111,27 +128,27 @@ def event_to_row(event: Event) -> dict:
 
 
 def write_events_csv(path: Path, events: Iterable[Event]) -> None:
-    """Write canonical events to `events.csv`.
+    """Записывает данные в файл или артефакт в формате, ожидаемом остальными этапами. Область применения: событий, CSV.
 
     Args:
-        path: Destination CSV path.
-        events: Events to serialize.
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        events (Iterable[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
 
     Returns:
-        None.
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
     """
     _write_csv_rows(path, _EVENT_FIELDNAMES, (event_to_row(event) for event in events))
 
 
 @contextmanager
 def open_events_csv_writer(path: Path) -> Iterator[csv.DictWriter]:
-    """Open a streaming CSV writer for canonical events.
-
+    """Открывает ресурс и возвращает объект для последующей записи или чтения. Область применения: событий, CSV.
+    
     Args:
-        path: Destination CSV path.
-
-    Yields:
-        Configured `csv.DictWriter` with the `events.csv` schema.
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+    
+    Returns:
+        Iterator[csv.DictWriter]: Контекстный менеджер с CSV-writer для потоковой записи строк событий.
     """
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=_EVENT_FIELDNAMES)
@@ -140,14 +157,14 @@ def open_events_csv_writer(path: Path) -> Iterator[csv.DictWriter]:
 
 
 def write_clusters_csv(path: Path, clusters: Iterable[ClusterSummary]) -> None:
-    """Write signature cluster summaries to CSV.
+    """Записывает данные в файл или артефакт в формате, ожидаемом остальными этапами. Область применения: кластеров, CSV.
 
     Args:
-        path: Destination CSV path.
-        clusters: Cluster summaries to serialize.
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        clusters (Iterable[ClusterSummary]): Список кластеров событий, используемый для отчетов или сохранения.
 
     Returns:
-        None.
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
     """
     fieldnames = [
         "cluster_id",
@@ -206,18 +223,18 @@ def write_top_clusters_md(
     analysis_summary: Optional[AnalysisSummary] = None,
     semantic_note: Optional[str] = None,
 ) -> None:
-    """Write a Markdown report for the top incident-like clusters.
+    """Записывает данные в файл или артефакт в формате, ожидаемом остальными этапами. Область применения: кластеров, Markdown.
 
     Args:
-        path: Destination Markdown path.
-        clusters: Cluster summaries to render.
-        event_count: Total number of parsed events.
-        cluster_count: Total number of signature clusters.
-        analysis_summary: Optional analysis summary for headline metrics.
-        semantic_note: Optional semantic clustering note.
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        clusters (List[ClusterSummary]): Список кластеров событий, используемый для отчетов или сохранения.
+        event_count (int): Значение `event_count`, используемое функцией при выполнении операции.
+        cluster_count (int): Количество найденных кластеров, учитываемое в итоговой сводке.
+        analysis_summary (Optional[AnalysisSummary], optional): Сводная структура с метриками, статусами и диагностикой выполнения.
+        semantic_note (Optional[str], optional): Значение `semantic_note`, используемое функцией при выполнении операции.
 
     Returns:
-        None.
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
     """
     lines = [
         "# LogCopilot Top Clusters",
@@ -267,14 +284,14 @@ def write_top_clusters_md(
 def write_semantic_clusters_csv(
     path: Path, clusters: Iterable[SemanticClusterSummary]
 ) -> None:
-    """Write semantic cluster summaries to CSV.
+    """Записывает данные в файл или артефакт в формате, ожидаемом остальными этапами. Область применения: семантического анализа, кластеров, CSV.
 
     Args:
-        path: Destination CSV path.
-        clusters: Semantic cluster summaries to serialize.
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        clusters (Iterable[SemanticClusterSummary]): Список кластеров событий, используемый для отчетов или сохранения.
 
     Returns:
-        None.
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
     """
     fieldnames = [
         "semantic_cluster_id",
@@ -302,14 +319,14 @@ def write_semantic_clusters_csv(
 
 
 def write_events_parquet(path: Path, events: List[Event]) -> bool:
-    """Write events to Parquet when `pyarrow` is available.
-
+    """Записывает данные в файл или артефакт в формате, ожидаемом остальными этапами. Область применения: событий.
+    
     Args:
-        path: Destination Parquet path.
-        events: Events to serialize.
-
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+    
     Returns:
-        `True` when Parquet was written, otherwise `False`.
+        bool: True, если Parquet-файл успешно записан; False, если зависимость pyarrow недоступна.
     """
     try:
         import pyarrow as pa
@@ -355,27 +372,27 @@ def write_events_parquet(path: Path, events: List[Event]) -> bool:
 
 
 def write_analysis_summary_json(path: Path, summary: AnalysisSummary) -> None:
-    """Write the analysis summary payload to JSON.
+    """Записывает данные в файл или артефакт в формате, ожидаемом остальными этапами. Область применения: сводки, JSON.
 
     Args:
-        path: Destination JSON path.
-        summary: Analysis summary to serialize.
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        summary (AnalysisSummary): Сводная структура с метриками, статусами и диагностикой выполнения.
 
     Returns:
-        None.
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
     """
     _write_json(path, asdict(summary))
 
 
 def write_llm_ready_clusters_json(path: Path, clusters: List[ClusterSummary]) -> None:
-    """Write a compact JSON payload for LLM-friendly incident clusters.
+    """Записывает данные в файл или артефакт в формате, ожидаемом остальными этапами. Область применения: кластеров, JSON.
 
     Args:
-        path: Destination JSON path.
-        clusters: Cluster summaries to serialize.
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        clusters (List[ClusterSummary]): Список кластеров событий, используемый для отчетов или сохранения.
 
     Returns:
-        None.
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
     """
     payload = [
         {
@@ -402,14 +419,14 @@ def write_llm_ready_clusters_json(path: Path, clusters: List[ClusterSummary]) ->
 
 
 def write_debug_samples_md(path: Path, events: List[Event]) -> None:
-    """Write Markdown debug samples for selected canonical events.
+    """Записывает данные в файл или артефакт в формате, ожидаемом остальными этапами. Область применения: Markdown.
 
     Args:
-        path: Destination Markdown path.
-        events: Events to render as debug samples.
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        events (List[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
 
     Returns:
-        None.
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
     """
     lines = ["# Debug Samples", ""]
     if not events:
@@ -449,39 +466,39 @@ def write_debug_samples_md(path: Path, events: List[Event]) -> None:
 
 
 def write_trace_summary_json(path: Path, trace_summary: dict) -> None:
-    """Write trace diagnostics to JSON.
+    """Записывает данные в файл или артефакт в формате, ожидаемом остальными этапами. Область применения: сводки, JSON.
 
     Args:
-        path: Destination JSON path.
-        trace_summary: Trace summary payload to serialize.
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        trace_summary (dict): Сводная структура с метриками, статусами и диагностикой выполнения.
 
     Returns:
-        None.
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
     """
     _write_json(path, trace_summary)
 
 
 def write_manifest_json(path: Path, payload: dict) -> None:
-    """Write the run manifest to JSON.
+    """Записывает данные в файл или артефакт в формате, ожидаемом остальными этапами. Область применения: JSON.
 
     Args:
-        path: Destination JSON path.
-        payload: Manifest payload to serialize.
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        payload (dict): Словарь с исходными или уже подготовленными данными для преобразования.
 
     Returns:
-        None.
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
     """
     _write_json(path, payload)
 
 
 def write_run_summary_json(path: Path, payload: dict) -> None:
-    """Write the run summary to JSON.
+    """Записывает данные в файл или артефакт в формате, ожидаемом остальными этапами. Область применения: сводки, JSON.
 
     Args:
-        path: Destination JSON path.
-        payload: Run summary payload to serialize.
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        payload (dict): Словарь с исходными или уже подготовленными данными для преобразования.
 
     Returns:
-        None.
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
     """
     _write_json(path, payload)

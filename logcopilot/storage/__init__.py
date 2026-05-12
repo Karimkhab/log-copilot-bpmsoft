@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""SQLite persistence layer for pipeline runs and artifacts."""
+"""Слой SQLite-хранения для запусков конвейера и артефактов."""
 
 from .sqlite import StorageRepository
 from .stage import (

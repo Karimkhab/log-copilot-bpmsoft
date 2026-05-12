@@ -5,6 +5,14 @@ from logcopilot.text import normalize_text
 
 class NormalizationTests(unittest.TestCase):
     def test_masks_dynamic_values(self) -> None:
+        """Проверяет ожидаемое поведение соответствующего сценария в автоматическом тесте.
+
+        Args:
+            Нет параметров.
+
+        Returns:
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+        """
         text = (
             "User test@example.com from 173.100.0.3 failed at 2026-03-11 08:22:34 "
             "for entity 123456 and uid a09c4eea-f280-49c3-bb12-e8f9d8d94d70"

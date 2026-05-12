@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Semantic clustering helpers for grouping signature representatives by meaning."""
+"""Вспомогательные функции семантической кластеризации представителей сигнатур по смыслу."""
 
 import csv
 from collections import defaultdict
@@ -17,13 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 def build_representative_text(event: Event) -> str:
-    """Build representative text used for semantic comparison.
-
+    """Формирует и возвращает структуру данных, объект или сводку для дальнейшей обработки.
+    
     Args:
-        event: Representative event for a signature cluster.
-
+        event (Event): Событие лога, которое нужно преобразовать, оценить или добавить в агрегатор.
+    
     Returns:
-        Text used as semantic embedding input.
+        str: Компактный текст события, пригодный для эмбеддинга и семантического сравнения представителей кластеров.
     """
     return event.embedding_text or event.normalized_message or event.raw_text
 
@@ -31,9 +31,17 @@ def build_representative_text(event: Event) -> str:
 def _select_signature_representatives(
     events: Iterable[Event],
 ) -> tuple[list[tuple[str, Event]], dict[str, int]]:
-    """Pick one representative event per signature and count signature hits."""
+    """Выбирает внутренний набор кандидатов по заданным признакам.
+    
+    Args:
+        events (Iterable[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+    
+    Returns:
+        tuple[list[tuple[str, Event]], dict[str, int]]: Представители сигнатур и словарь размеров каждой сигнатурной группы.
+    """
     representatives = {}
     hits_by_signature = defaultdict(int)
+    # Проходим события один раз и одновременно накапливаем агрегаты для отчета.
     for event in events:
         hits_by_signature[event.signature_hash] += 1
         current = representatives.get(event.signature_hash)
@@ -43,13 +51,16 @@ def _select_signature_representatives(
 
 
 def _require_semantic_dependencies() -> None:
-    """Validate that semantic clustering dependencies are installed.
+    """Выполняет вспомогательную операцию для семантического анализа.
+
+    Args:
+        Нет параметров.
 
     Returns:
-        None.
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
 
     Raises:
-        RuntimeError: If sentence-transformers or scikit-learn are unavailable.
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
     """
     try:
         from sentence_transformers import SentenceTransformer  # noqa: F401
@@ -78,20 +89,23 @@ def cluster_signatures_semantically(
     max_signatures: int = 2500,
     progress_callback: Optional[Callable[[str], None]] = None,
 ) -> Tuple[List[SemanticClusterSummary], str]:
-    """Cluster signature representatives using semantic embeddings.
-
+    """Выполняет вспомогательную операцию для кластера.
+    
     Args:
-        events: Representative events to cluster semantically.
-        enabled: Semantic mode flag.
-        model_name: Sentence-transformer model name.
-        min_cluster_size: Minimum size for semantic clusters.
-        min_samples: Optional density threshold override.
-        cache_dir: Optional cache directory for embeddings.
-        max_signatures: Maximum number of representative signatures to embed.
-        progress_callback: Optional callback for user-facing progress updates.
-
+        events (Iterable[Event]): Список или поток событий, на основе которого строятся агрегаты, отчеты или выводы.
+        enabled (str): Значение `enabled`, используемое функцией при выполнении операции.
+        model_name (str): Имя модели эмбеддингов или внешнего сервиса.
+        min_cluster_size (int): Значение `min_cluster_size`, используемое функцией при выполнении операции.
+        min_samples (Optional[int], optional): Значение `min_samples`, используемое функцией при выполнении операции.
+        cache_dir (Optional[Path], optional): Директория кэша, где хранятся эмбеддинги и вспомогательные файлы.
+        max_signatures (int, optional): Значение `max_signatures`, используемое функцией при выполнении операции.
+        progress_callback (Optional[Callable[[str], None]], optional): Значение `progress_callback`, используемое функцией при выполнении операции.
+    
     Returns:
-        Tuple of semantic cluster summaries and an explanatory status note.
+        Tuple[List[SemanticClusterSummary], str]: Семантические кластеры и диагностическая заметка о выполненном или пропущенном этапе.
+    
+    Raises:
+        RuntimeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
     """
     if enabled == "off":
         logger.info("semantic_disabled: enabled=%s", enabled)
@@ -203,7 +217,18 @@ def _build_semantic_cluster_summaries(
     hits_by_signature: dict[str, int],
     cosine_similarity,
 ) -> List[SemanticClusterSummary]:
-    """Build semantic cluster summary objects from fitted clustering labels."""
+    """Формирует внутреннюю структуру данных, объект или сводку для дальнейшей обработки. Область применения: семантического анализа, кластера.
+    
+    Args:
+        signature_items (list[tuple[str, Event]]): Коллекция элементов, которую нужно ограничить, преобразовать или агрегировать.
+        labels (Any): Значение `labels`, используемое функцией при выполнении операции.
+        embeddings (Any): Значение `embeddings`, используемое функцией при выполнении операции.
+        hits_by_signature (dict[str, int]): Значение `hits_by_signature`, используемое функцией при выполнении операции.
+        cosine_similarity (Any): Значение `cosine_similarity`, используемое функцией при выполнении операции.
+    
+    Returns:
+        List[SemanticClusterSummary]: Сводки семантических кластеров с представителями, размерами групп и примерами сообщений.
+    """
     grouped = defaultdict(list)
     for index, ((signature_hash, event), label) in enumerate(zip(signature_items, labels)):
         grouped[int(label)].append((index, signature_hash, event))
@@ -236,14 +261,14 @@ def _build_semantic_cluster_summaries(
 
 
 def _cache_file_for_model(cache_dir: Path, model_name: str) -> Path:
-    """Return the JSON cache file path for one embedding model.
-
+    """Выполняет вспомогательную операцию для файла.
+    
     Args:
-        cache_dir: Base cache directory.
-        model_name: Sentence-transformer model name.
-
+        cache_dir (Path): Директория кэша, где хранятся эмбеддинги и вспомогательные файлы.
+        model_name (str): Имя модели эмбеддингов или внешнего сервиса.
+    
     Returns:
-        Cache file path for the model.
+        Path: Путь к JSON-файлу кэша эмбеддингов для указанной модели.
     """
     digest = sha1(model_name.encode("utf-8")).hexdigest()[:16]
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -251,14 +276,14 @@ def _cache_file_for_model(cache_dir: Path, model_name: str) -> Path:
 
 
 def _load_embedding_cache(cache_dir: Optional[Path], model_name: str) -> dict[str, list[float]]:
-    """Load cached embeddings for a model when available.
-
+    """Выполняет вспомогательную операцию для логики проекта.
+    
     Args:
-        cache_dir: Optional cache directory.
-        model_name: Sentence-transformer model name.
-
+        cache_dir (Optional[Path]): Директория кэша, где хранятся эмбеддинги и вспомогательные файлы.
+        model_name (str): Имя модели эмбеддингов или внешнего сервиса.
+    
     Returns:
-        Mapping from signature hash to cached embedding vector.
+        dict[str, list[float]]: Словарь сохраненных эмбеддингов; пустой словарь при отсутствии или повреждении кэша.
     """
     if cache_dir is None:
         return {}
@@ -272,15 +297,15 @@ def _load_embedding_cache(cache_dir: Optional[Path], model_name: str) -> dict[st
 
 
 def _save_embedding_cache(cache_dir: Optional[Path], model_name: str, cache: dict[str, list[float]]) -> None:
-    """Persist the embedding cache for a model when possible.
+    """Выполняет вспомогательную операцию для логики проекта.
 
     Args:
-        cache_dir: Optional cache directory.
-        model_name: Sentence-transformer model name.
-        cache: Cache payload keyed by signature hash.
+        cache_dir (Optional[Path]): Директория кэша, где хранятся эмбеддинги и вспомогательные файлы.
+        model_name (str): Имя модели эмбеддингов или внешнего сервиса.
+        cache (dict[str, list[float]]): Словарь кэша эмбеддингов, индексированный текстовыми ключами.
 
     Returns:
-        None.
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
     """
     if cache_dir is None:
         return
@@ -299,18 +324,18 @@ def _encode_embeddings(
     cache_dir: Optional[Path],
     progress_callback: Optional[Callable[[str], None]],
 ) -> object:
-    """Encode embeddings with signature-based caching.
-
+    """Выполняет вспомогательную операцию для логики проекта.
+    
     Args:
-        model: Loaded sentence-transformer model.
-        model_name: Sentence-transformer model name.
-        signature_items: Representative signature-event pairs.
-        texts: Embedding input texts aligned with `signature_items`.
-        cache_dir: Optional cache directory.
-        progress_callback: Optional callback for progress updates.
-
+        model (Any): Значение `model`, используемое функцией при выполнении операции.
+        model_name (str): Имя модели эмбеддингов или внешнего сервиса.
+        signature_items (list[tuple[str, Event]]): Коллекция элементов, которую нужно ограничить, преобразовать или агрегировать.
+        texts (list[str]): Набор текстов, в которых нужно подсчитать маски или извлечь признаки.
+        cache_dir (Optional[Path]): Директория кэша, где хранятся эмбеддинги и вспомогательные файлы.
+        progress_callback (Optional[Callable[[str], None]]): Значение `progress_callback`, используемое функцией при выполнении операции.
+    
     Returns:
-        Dense embedding matrix as a NumPy array.
+        object: Матрица эмбеддингов, которую возвращает SentenceTransformer для переданных текстов.
     """
     import numpy as np
 
@@ -355,13 +380,13 @@ def _encode_embeddings(
 
 
 def load_representative_events_from_csv(events_csv_path: Path) -> List[Event]:
-    """Load one representative event per signature hash from an events CSV.
-
+    """Загружает данные из файла или хранилища и возвращает их в рабочем формате. Область применения: событий, CSV.
+    
     Args:
-        events_csv_path: Path to `events.csv`.
-
+        events_csv_path (Path): Путь к CSV-файлу событий, из которого восстанавливаются записи.
+    
     Returns:
-        Representative events reconstructed from CSV rows.
+        List[Event]: Список событий, восстановленных из CSV-файла для повторной семантической кластеризации.
     """
     events: List[Event] = []
     seen = set()
@@ -377,7 +402,14 @@ def load_representative_events_from_csv(events_csv_path: Path) -> List[Event]:
 
 
 def _event_from_csv_row(row: dict[str, str]) -> Event:
-    """Reconstruct one canonical event from an `events.csv` row."""
+    """Выполняет вспомогательную операцию для события, CSV, строки.
+    
+    Args:
+        row (dict[str, str]): Одна строка табличных данных, из которой строится объект результата.
+    
+    Returns:
+        Event: Каноническое событие, собранное из одной строки CSV с восстановленными полями и сигнатурой.
+    """
     return Event(
         event_id=row["event_id"],
         source_file=row["source_file"],
@@ -417,17 +449,17 @@ def rerun_semantic_clustering_from_events_csv(
     min_cluster_size: int,
     min_samples: Optional[int] = None,
 ) -> Tuple[List[SemanticClusterSummary], str]:
-    """Rerun semantic clustering from a previously exported events CSV.
-
+    """Повторно выполняет вычисление на основе ранее сохраненных данных. Область применения: семантического анализа, событий, CSV.
+    
     Args:
-        events_csv_path: Source events CSV path.
-        output_csv_path: Destination path for semantic clusters CSV.
-        model_name: Sentence-transformer model name.
-        min_cluster_size: Minimum size for semantic clusters.
-        min_samples: Optional density threshold override.
-
+        events_csv_path (Path): Путь к CSV-файлу событий, из которого восстанавливаются записи.
+        output_csv_path (Path): Путь к файлу или артефакту, с которым работает функция.
+        model_name (str): Имя модели эмбеддингов или внешнего сервиса.
+        min_cluster_size (int): Значение `min_cluster_size`, используемое функцией при выполнении операции.
+        min_samples (Optional[int], optional): Значение `min_samples`, используемое функцией при выполнении операции.
+    
     Returns:
-        Tuple of semantic cluster summaries and an explanatory status note.
+        Tuple[List[SemanticClusterSummary], str]: Новые семантические кластеры по событиям из CSV и диагностическая заметка этапа.
     """
     events = load_representative_events_from_csv(events_csv_path)
     clusters, note = cluster_signatures_semantically(

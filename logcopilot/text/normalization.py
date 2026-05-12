@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Text normalization: regex masking of PII, IDs and timestamps."""
+"""Нормализация текста: маскирование персональных данных, идентификаторов и временных меток регулярными выражениями."""
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
@@ -51,21 +51,21 @@ MASK_TOKEN_NAMES = ("UUID", "IP", "EMAIL", "JWT", "HEX", "REQ_ID", "TRACE_ID", "
 
 @dataclass
 class NormalizationStats:
-    """Accumulator with counts and examples of applied normalization masks."""
+    """Накопитель счетчиков и примеров примененных масок нормализации."""
 
     mask_counts: Counter[str] = field(default_factory=Counter)
     raw_patterns: Dict[str, Counter[str]] = field(default_factory=lambda: defaultdict(Counter))
     total_events: int = 0
 
     def observe_mask(self, mask_name: str, raw_value: str) -> None:
-        """Record one applied mask and its raw value preview.
+        """Выполняет вспомогательную операцию для логики проекта.
 
         Args:
-            mask_name: Logical mask identifier.
-            raw_value: Raw matched text before replacement.
+            mask_name (str): Название маски, примененной к динамическому фрагменту текста.
+            raw_value (str): Исходное значение до маскирования или нормализации.
 
         Returns:
-            None.
+            None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
         """
         self.mask_counts[mask_name] += 1
         preview = WHITESPACE_RE.sub(" ", raw_value.strip())[:120]
@@ -73,13 +73,13 @@ class NormalizationStats:
             self.raw_patterns[mask_name][preview] += 1
 
     def snapshot(self, top_n: int = 10) -> dict:
-        """Build a serializable snapshot of collected normalization statistics.
-
+        """Выполняет вспомогательную операцию для логики проекта.
+        
         Args:
-            top_n: Maximum number of sample raw patterns to keep per mask.
-
+            top_n (int, optional): Количество наиболее значимых элементов, которые нужно включить в результат.
+        
         Returns:
-            Snapshot dictionary for reporting and diagnostics.
+            dict: Снимок статистики нормализации: счетчики масок и примеры исходных значений.
         """
         return {
             "mask_counts": dict(self.mask_counts),
@@ -97,22 +97,30 @@ def _apply_mask(
     replacement: str,
     stats: Optional[NormalizationStats],
 ) -> str:
-    """Apply one regex mask and optionally record mask statistics.
-
+    """Выполняет вспомогательную операцию для логики проекта.
+    
     Args:
-        text: Source text to normalize.
-        mask_name: Logical mask identifier.
-        pattern: Regex pattern to replace.
-        replacement: Replacement template.
-        stats: Optional stats accumulator.
-
+        text (str): Текстовое содержимое лога или фрагмент строки, которое анализируется функцией.
+        mask_name (str): Название маски, примененной к динамическому фрагменту текста.
+        pattern (re.Pattern[str]): Значение `pattern`, используемое функцией при выполнении операции.
+        replacement (str): Значение `replacement`, используемое функцией при выполнении операции.
+        stats (Optional[NormalizationStats]): Объект статистики нормализации, куда записываются сведения о масках.
+    
     Returns:
-        Text after applying the mask replacement.
+        str: Текст после применения одной регулярной маски и обновления статистики найденных значений.
     """
     if stats is None:
         return pattern.sub(replacement, text)
 
     def replacer(match: re.Match[str]) -> str:
+        """Выполняет вспомогательную операцию для логики проекта.
+        
+        Args:
+            match (re.Match[str]): Значение `match`, используемое функцией при выполнении операции.
+        
+        Returns:
+            str: Токен маски, которым заменяется очередное совпадение регулярного выражения.
+        """
         stats.observe_mask(mask_name, match.group(0))
         return match.expand(replacement)
 
@@ -120,14 +128,14 @@ def _apply_mask(
 
 
 def normalize_text(text: str, stats: Optional[NormalizationStats] = None) -> str:
-    """Normalize free-form text by masking identifiers and collapsing whitespace.
-
+    """Нормализует входное значение к каноническому виду, удобному для сравнения и агрегации.
+    
     Args:
-        text: Source text to normalize.
-        stats: Optional stats accumulator for observed masks.
-
+        text (str): Текстовое содержимое лога или фрагмент строки, которое анализируется функцией.
+        stats (Optional[NormalizationStats], optional): Объект статистики нормализации, куда записываются сведения о масках.
+    
     Returns:
-        Lowercased normalized text with masked volatile fragments.
+        str: Нормализованный текст с замаскированными динамическими значениями, сжатыми пробелами и обрезанными краями.
     """
     normalized = text or ""
     if stats is not None:
@@ -139,13 +147,13 @@ def normalize_text(text: str, stats: Optional[NormalizationStats] = None) -> str
 
 
 def count_mask_tokens(texts: Iterable[str]) -> Counter[str]:
-    """Count how many mask tokens appear across normalized texts.
-
+    """Подсчитывает элементы или признаки во входной коллекции.
+    
     Args:
-        texts: Normalized texts to inspect.
-
+        texts (Iterable[str]): Набор текстов, в которых нужно подсчитать маски или извлечь признаки.
+    
     Returns:
-        Counter keyed by logical mask token name.
+        Counter[str]: Счетчик специальных токенов-масок, найденных во всех переданных текстах.
     """
     counts: Counter[str] = Counter()
     for text in texts:

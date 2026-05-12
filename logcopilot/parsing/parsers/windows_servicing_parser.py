@@ -28,6 +28,14 @@ class ParsedWindowsLine:
 
 
 def parse_windows_line(line: str) -> ParsedWindowsLine | None:
+    """Разбирает входные данные и преобразует их в структурированный результат. Область применения: Windows servicing.
+    
+    Args:
+        line (str): Одна строка лога, которую нужно разобрать или проверить.
+    
+    Returns:
+        ParsedWindowsLine | None: Разобранная строка Windows servicing с датой, временем, уровнем, компонентом и сообщением; None при несовпадении формата.
+    """
     match = WINDOWS_LINE_RE.match(line.rstrip())
     if not match:
         return None
@@ -49,15 +57,31 @@ def parse_windows_line(line: str) -> ParsedWindowsLine | None:
 
 
 def is_windows_start(line: str) -> bool:
+    """Проверяет условие и возвращает логический результат. Область применения: Windows servicing.
+    
+    Args:
+        line (str): Одна строка лога, которую нужно разобрать или проверить.
+    
+    Returns:
+        bool: True, если строка выглядит как начало записи Windows servicing.
+    """
     return bool(WINDOWS_LINE_RE.match(line.rstrip()))
 
 
 class WindowsServicingParser(BaseParser):
-    """Parser for Windows servicing logs with CBS/CSI records."""
+    """Парсер логов Windows servicing с записями CBS/CSI."""
 
     name = "windows_servicing"
 
     def can_parse(self, sample: str) -> float:
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            sample (str): Образец текста лога, по которому оценивается применимость парсера.
+
+        Returns:
+            float: Оценка уверенности от 0.0 до 1.0, показывающая насколько парсер подходит для текста.
+        """
         lines = [line for line in sample.splitlines() if line.strip()]
         if not lines:
             return 0.0
@@ -65,12 +89,29 @@ class WindowsServicingParser(BaseParser):
         return matches / len(lines)
 
     def parse(self, text: str, source: str | None = None):
+        """Выполняет вспомогательную операцию для логики проекта.
+
+        Args:
+            text (str): Текстовое содержимое лога или фрагмент строки, которое анализируется функцией.
+            source (str | None, optional): Имя источника или файла, из которого получена запись лога.
+
+        Returns:
+            ParseResult: Результат парсинга с событиями, диагностикой и предупреждениями.
+        """
         events: list[CanonicalEvent] = []
         warnings: list[str] = []
         lines = text.splitlines()
         buffer: list[str] = []
 
         def flush_buffer() -> None:
+            """Выполняет вспомогательную операцию для логики проекта.
+
+            Args:
+                Нет параметров.
+
+            Returns:
+                None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+            """
             if not buffer:
                 return
             first_line = buffer[0]

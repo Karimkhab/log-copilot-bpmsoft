@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Pipeline stage entrypoint for parse-only log processing."""
+"""Точка входа этапа конвейера для обработки логов только парсингом."""
 
 import logging
 import time
@@ -14,20 +14,43 @@ logger = logging.getLogger(__name__)
 
 
 def _print_phase(message: str) -> None:
-    """Emit one user-visible phase message and mirror it to structured logs."""
+    """Выполняет вспомогательную операцию для логики проекта.
+
+    Args:
+        message (str): Значение `message`, используемое функцией при выполнении операции.
+
+    Returns:
+        None: Функция изменяет состояние, выполняет проверку или запись и не возвращает полезное значение.
+    """
     logger.info("run_phase: %s", message)
     print(f"[logcopilot] {message}")
 
 
 def _source_file_label(path: Path, input_path_obj: Path) -> str:
-    """Build the user-facing source file label for one parsed file."""
+    """Выполняет вспомогательную операцию для файла.
+    
+    Args:
+        path (Path): Путь к файлу или артефакту, с которым работает функция.
+        input_path_obj (Path): Значение `input_path_obj`, используемое функцией при выполнении операции.
+    
+    Returns:
+        str: Имя файла для логов и отчетов: basename для одиночного файла или относительный путь внутри директории.
+    """
     if input_path_obj.is_file():
         return path.name
     return str(path.relative_to(input_path_obj))
 
 
 def _parse_result_payload(source_file: str, parse_result) -> ParseFileDiagnostics:
-    """Convert one parser result into the diagnostics payload stored for the run."""
+    """Разбирает внутренний фрагмент данных и возвращает структурированное представление. Область применения: полезной нагрузки.
+    
+    Args:
+        source_file (str): Имя файла-источника, которое попадет в событие и отчетные артефакты.
+        parse_result (Any): Результат выполнения конвейера или промежуточного этапа, из которого берутся данные.
+    
+    Returns:
+        ParseFileDiagnostics: Диагностика парсинга одного файла с именем парсера, уверенностью, статистикой и предупреждениями.
+    """
     return ParseFileDiagnostics(
         source_file=source_file,
         parser_name=parse_result.parser_name,
@@ -38,14 +61,13 @@ def _parse_result_payload(source_file: str, parse_result) -> ParseFileDiagnostic
 
 
 def run_parsing(context: PipelineContext) -> PipelineContext:
-    """
-    Парсит исходные логи в единый формат событий.
-
-    Находит входные лог-файлы, запускает подходящий парсер для каждого файла,
-    собирает события и диагностику парсинга в контекст пайплайна.
-
-    :param context: текущий контекст пайплайна
-    :return: контекст с распарсенными событиями и диагностикой
+    """Выполняет этап конвейера или профиль анализа и возвращает обновленный результат работы.
+    
+    Args:
+        context (PipelineContext): Контекст выполнения конвейера с конфигурацией, промежуточными результатами и путями артефактов.
+    
+    Returns:
+        PipelineContext: Обновленный контекст конвейера после выполнения этапа `run_parsing`.
     """
     input_path_obj = context.input_path
     source_files = discover_log_files(input_path_obj) # файлы, которые нужно распарсить
