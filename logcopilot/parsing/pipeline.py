@@ -5,8 +5,12 @@ from pathlib import Path
 from typing import Iterator
 
 from ..domain import RawEvent
-from .models import CanonicalEvent, ParseResult
+from .models import CanonicalEvent, ParseResult, ParserSelection
 from .parsers import (
+    BPMSoftAspNetCoreParser,
+    BPMSoftBusinessProcessParser,
+    BPMSoftErrorParser,
+    BPMSoftRequestParser,
     GenericFallbackParser,
     JsonParser,
     LogfmtParser,
@@ -16,8 +20,16 @@ from .parsers import (
     WindowsServicingParser,
 )
 from .registry import ParserRegistry
+from .utils import read_detection_sample
 
 logger = logging.getLogger(__name__)
+
+_HINTED_PARSERS = {
+    "request.log": BPMSoftRequestParser(),
+    "error.log": BPMSoftErrorParser(),
+    "businessprocess.log": BPMSoftBusinessProcessParser(),
+    "aspnetcore.log": BPMSoftAspNetCoreParser(),
+}
 
 
 def discover_log_files(root: Path) -> list[Path]:
@@ -46,6 +58,7 @@ def build_default_registry() -> ParserRegistry:
     registry = ParserRegistry()
     registry.register(JsonParser())
     registry.register(LogfmtParser())
+    registry.register(BPMSoftRequestParser())
     registry.register(WebAccessParser())
     registry.register(WindowsServicingParser())
     registry.register(SyslogParser())
@@ -55,6 +68,18 @@ def build_default_registry() -> ParserRegistry:
 
 
 DEFAULT_REGISTRY = build_default_registry()
+
+
+def _select_hinted_parser(path: Path, text: str) -> tuple[object, ParserSelection] | None:
+    """Prefer filename-targeted BPMSoft parsers for well-known log families."""
+    parser = _HINTED_PARSERS.get(path.name.lower())
+    if parser is None:
+        return None
+    sample = read_detection_sample(text)
+    if parser.name == "bpmsoft_request" and parser.can_parse(sample) < 0.6:
+        return None
+    logger.info("parser_hint_selected: source_file=%s parser=%s", path.name, parser.name)
+    return parser, ParserSelection(parser_name=parser.name, confidence=max(parser.can_parse(sample), 0.95), used_fallback=False)
 
 
 def canonical_to_raw_event(event: CanonicalEvent, source_file: str) -> RawEvent:
@@ -105,7 +130,11 @@ def parse_file(path: Path, root: Path, registry: ParserRegistry | None = None) -
     registry = registry or DEFAULT_REGISTRY # используем стандартный реестр, если другой не передали
     text = path.read_text(encoding="utf-8", errors="replace") # читаем файл с заменой битых символов
     source_file = path.name if root.is_file() else str(path.relative_to(root)) # имя файла для отчетов
-    parser, selection = registry.select(text) # выбираем самый подходящий парсер по содержимому
+    hinted_selection = _select_hinted_parser(path, text)
+    if hinted_selection is not None:
+        parser, selection = hinted_selection
+    else:
+        parser, selection = registry.select(text) # выбираем самый подходящий парсер по содержимому
 
     logger.info(
         "parser_selected: source_file=%s parser=%s detector_confidence=%.3f fallback=%s",

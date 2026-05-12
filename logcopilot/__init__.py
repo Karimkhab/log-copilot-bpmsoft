@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Публичный API пакета LogCopilot."""
 
-__all__ = ["__version__", "PipelineConfig", "RunResult", "run_pipeline"]
+__all__ = ["__version__", "PipelineConfig", "RunResult", "run_batch_pipeline", "run_pipeline"]
 
 __version__ = "0.1.0"
 
@@ -23,6 +23,10 @@ def __getattr__(name: str):
         from .pipeline import run_pipeline
 
         return run_pipeline
+    if name == "run_batch_pipeline":
+        from .pipeline import run_batch_pipeline
+
+        return run_batch_pipeline
     if name in {"PipelineConfig", "RunResult"}:
         from .domain import PipelineConfig, RunResult
 

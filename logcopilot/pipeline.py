@@ -5,8 +5,10 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import asdict
 import logging
+import json
 from pathlib import Path
 from typing import Dict, List, Optional
+from uuid import uuid4
 
 from .analysis import AnalysisQualityAccumulator
 from .analysis.quality import assess_profile_fit
@@ -25,7 +27,7 @@ from .output import (
     run_artifact_generation,
     run_write_events_csv,
 )
-from .parsing import run_parsing
+from .parsing import discover_log_files, run_parsing
 from .profiles import run_profile_computation
 from .storage import (
     run_fail_run,
@@ -37,6 +39,13 @@ from .storage import (
 from .text import NormalizationStats
 
 logger = logging.getLogger(__name__)
+
+_BATCH_AUTO_PROFILES = {
+    "request.log": "traffic",
+    "error.log": "incidents",
+    "businessprocess.log": "incidents",
+    "aspnetcore.log": "incidents",
+}
 
 
 def _build_trace_summary(
@@ -252,6 +261,97 @@ def _build_run_summary_payload(
     }
 
 
+def _select_batch_profile(path: Path, requested_profile: str) -> str:
+    """Pick the profile for one file in batch mode."""
+    requested = requested_profile.lower()
+    if requested != "auto":
+        return requested
+    return _BATCH_AUTO_PROFILES.get(path.name.lower(), "heatmap")
+
+
+def run_batch_pipeline(
+    input_path: str,
+    profile: str = "auto",
+    out_dir: Optional[str] = None,
+    clean_out: bool = False,
+    semantic: str = "on",
+    semantic_model: str = "sentence-transformers/all-MiniLM-L6-v2",
+    semantic_min_cluster_size: int = 3,
+    semantic_min_samples: int | None = None,
+    agent: str = "off",
+    agent_question: str | None = None,
+    agent_provider: str = "none",
+) -> dict:
+    """Run the pipeline for every discovered `.log` file under one input path."""
+    input_root = Path(input_path).expanduser()
+    source_files = discover_log_files(input_root)
+    batch_id = uuid4().hex
+    output_root = Path(out_dir or "out").expanduser()
+    batch_dir = output_root / "batches" / batch_id
+    batch_dir.mkdir(parents=True, exist_ok=True)
+
+    if not source_files:
+        raise FileNotFoundError(f"No .log files found under {input_root}")
+
+    runs = []
+    completed = 0
+    failed = 0
+    for file_path in source_files:
+        selected_profile = _select_batch_profile(file_path, profile)
+        try:
+            result = run_pipeline(
+                input_path=str(file_path),
+                profile=selected_profile,
+                out_dir=str(output_root),
+                clean_out=clean_out,
+                semantic=semantic,
+                semantic_model=semantic_model,
+                semantic_min_cluster_size=semantic_min_cluster_size,
+                semantic_min_samples=semantic_min_samples,
+                agent=agent,
+                agent_question=agent_question,
+                agent_provider=agent_provider,
+            )
+            completed += 1
+            runs.append(
+                {
+                    "input_path": str(file_path),
+                    "profile": selected_profile,
+                    "status": result.status,
+                    "run_id": result.run_id,
+                    "output_dir": result.output_dir,
+                    "quality_status": result.summary.quality_status,
+                    "artifact_paths": dict(result.artifact_paths),
+                }
+            )
+        except Exception as error:
+            failed += 1
+            logger.exception("batch_run_failed: input=%s profile=%s", str(file_path), selected_profile)
+            runs.append(
+                {
+                    "input_path": str(file_path),
+                    "profile": selected_profile,
+                    "status": "failed",
+                    "error": f"{type(error).__name__}: {error}",
+                }
+            )
+
+    summary = {
+        "batch_id": batch_id,
+        "input_path": str(input_root),
+        "out_dir": str(output_root),
+        "requested_profile": profile,
+        "total_files": len(source_files),
+        "completed": completed,
+        "failed": failed,
+        "runs": runs,
+    }
+    summary_path = batch_dir / "batch_summary.json"
+    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    summary["summary_json"] = str(summary_path)
+    return summary
+
+
 def run_pipeline(
     input_path: str,
     profile: str = "incidents",
@@ -434,6 +534,7 @@ def build_parser():
 __all__ = [
     "build_parser",
     "main",
+    "run_batch_pipeline",
     "run_pipeline",
 ]
 

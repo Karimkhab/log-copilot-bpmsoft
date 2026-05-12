@@ -204,6 +204,7 @@ def _incident_cluster(cluster: Any) -> Dict[str, Any]:
         or ""
     )
     return {
+        "card_key": _clip(_field(cluster, "cluster_id", ""), 120),
         "cluster_id": _clip(_field(cluster, "cluster_id", ""), 120),
         "hits": int(_field(cluster, "hits", 0) or 0),
         "incident_hits": int(_field(cluster, "incident_hits", 0) or 0),
@@ -247,6 +248,7 @@ def _incidents_facts(context: PipelineContext) -> Dict[str, Any]:
         "semantic_note": payload.get("semantic_note", ""),
         "top_cluster_candidates": [
             {
+                "card_key": item["card_key"],
                 "cluster_id": item["cluster_id"],
                 "hits": item["hits"],
                 "incident_hits": item["incident_hits"],
@@ -285,9 +287,10 @@ def _hotspot(row: Dict[str, Any]) -> Dict[str, Any]:
         Dict[str, Any]: Компактное описание горячего бакета тепловой карты с временем, компонентом, операцией, ошибками и задержкой.
     """
     return {
-        "bucket_start": _clip(row.get("bucket_start", ""), 80),
+        "card_key": f"{bucket_start}|{operation}",
+        "bucket_start": bucket_start,
         "component": _clip(row.get("component", "unknown"), 220),
-        "operation": _clip(row.get("operation", "unknown"), 260),
+        "operation": operation,
         "hits": int(row.get("hits", 0) or 0),
         "qps": float(row.get("qps", 0.0) or 0.0),
         "p95_latency_ms": row.get("p95_latency_ms"),
@@ -345,9 +348,10 @@ def _traffic_row(row: Dict[str, Any]) -> Dict[str, Any]:
         Dict[str, Any]: Компактное описание строки трафика с методом, путем, статусом, частотой, ошибками и p95 задержки.
     """
     return {
-        "method": _clip(row.get("method", "UNKNOWN"), 32),
-        "path": _clip(row.get("path", "unknown"), 260),
-        "http_status": row.get("http_status"),
+        "card_key": f"{method}|{path}|{status}",
+        "method": method,
+        "path": path,
+        "http_status": status,
         "hits": int(row.get("hits", 0) or 0),
         "unique_ips": int(row.get("unique_ips", 0) or 0),
         "p95_latency_ms": row.get("p95_latency_ms"),
@@ -366,7 +370,11 @@ def _traffic_anomaly(row: Dict[str, Any]) -> Dict[str, Any]:
         Dict[str, Any]: Компактное описание аномалии трафика с типом паттерна, серьезностью, причиной и связанными HTTP/IP-полями.
     """
     payload = _dict(row.get("payload"))
+    method = _clip(payload.get("method", ""), 32)
+    path = _clip(payload.get("path", ""), 260)
+    status = payload.get("http_status")
     return {
+        "card_key": f"{_clip(row.get('anomaly_type', ''), 80)}|{method}|{path}|{status}",
         "anomaly_type": _clip(row.get("anomaly_type", ""), 80),
         "severity": _clip(row.get("severity", "medium"), 40),
         "title": _clip(row.get("title", ""), 240),

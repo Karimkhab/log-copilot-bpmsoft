@@ -20,6 +20,7 @@ OUTPUT_CONTRACT = {
     "limitations": ["строки"],
     "cards": [
         {
+            "card_key": "строгое значение из compact facts",
             "card_type": "incident|heatmap|traffic",
             "title": "строка",
             "severity": "low|medium|high|critical",
@@ -37,16 +38,19 @@ PROFILE_RULES = {
     "incidents": [
         "Создавай incident cards на основе compact_llm_ready_cluster_facts.",
         "Если incident_hits равен нулю, но кластеры существуют, возвращай low-severity observation/noise cards, а не пустой список.",
+        "Каждая card обязана вернуть card_key, точно скопированный из соответствующего факта.",
         "Каждая incident card должна включать cluster_id, hits, incident_hits, first_seen, last_seen и exception_type, когда они доступны.",
     ],
     "heatmap": [
         "Создавай heatmap cards на основе hotspots.",
         "Если hotspots существуют, cards не должны быть пустыми.",
+        "Каждая card обязана вернуть card_key, точно скопированный из соответствующего hotspot.",
         "Каждая heatmap card должна включать bucket_start, component, operation, hits, qps и p95_latency_ms, когда они доступны.",
     ],
     "traffic": [
         "Сначала создавай traffic cards из suspicious_patterns, затем из traffic_findings.",
         "Если существуют endpoint или anomaly facts, cards не должны быть пустыми.",
+        "Каждая card обязана вернуть card_key, точно скопированный из соответствующего факта.",
         "Каждая traffic card должна включать pattern_type, method, path, http_status, hits, unique_ips и p95_latency_ms, когда они доступны.",
     ],
 }
@@ -87,6 +91,8 @@ def _system_prompt(profile: str) -> str:
         "Пиши весь человекочитаемый текст по-русски: title, short_summary, technical_summary, business_summary, key_findings, "
         "recommended_actions, limitations, summary и evidence. "
         "Но значения enum-полей оставляй строго как в контракте на английском: profile, overall_status, card_type, severity. "
+        "Не меняй factual anchors карточки: card_key, component, operation, path, exception_type, counts и time windows должны соответствовать тому факту, "
+        "из которого построена карточка. Не используй top_components или top_operations как источник payload для карточки, если карточка строится из hotspot. "
         "Сохраняй ответ коротким: summaries по одному предложению, не больше двух evidence items и двух actions на card. "
         "Если не уверен, используй короткий grounded text, скопированный или выведенный из supplied facts. "
         f"Выбранный профиль: {profile}. {rules}"
