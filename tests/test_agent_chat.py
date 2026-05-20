@@ -5,10 +5,10 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from logcopilot.agent.config import AgentModelConfig, provider_is_configured, resolve_agent_model_config
-from logcopilot.agent.stage import validate_agent_result_payload
-from logcopilot.domain import AgentInputContext, IncidentCard
-from logcopilot.pipeline import run_pipeline
+from src.agent.config import AgentModelConfig, provider_is_configured, resolve_agent_model_config
+from src.agent.stage import validate_agent_result_payload
+from src.domain import AgentInputContext, IncidentCard
+from src.pipeline import run_pipeline
 
 
 class AgentStructuredLayerTests(unittest.TestCase):
@@ -234,7 +234,7 @@ class AgentStructuredLayerTests(unittest.TestCase):
             log_file = root / "traffic.log"
             log_file.write_text(content, encoding="utf-8")
             with patch.dict(os.environ, {"YC_AI_API_KEY": "", "YC_FOLDER_ID": ""}, clear=False), patch(
-                "logcopilot.agent.stage._invoke_structured_llm",
+                "src.agent.stage._invoke_structured_llm",
                 side_effect=AssertionError("LLM should not be called when Yandex config is incomplete"),
             ):
                 result = run_pipeline(

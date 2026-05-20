@@ -31,13 +31,13 @@
 flowchart TD
     INPUT[("📁 Вход: .log файл")]
     
-    INPUT --> PARSE[Парсинг логов<br/>logcopilot/core/parser.py]
+    INPUT --> PARSE[Парсинг логов<br/>src/parsing/]
     
     PARSE --> NORMALIZE[Нормализация данных<br/>маскирование NUM, UUID, IP, TOKEN]
     
-    NORMALIZE --> EVENT[Создание Event'ов<br/>logcopilot/core/event.py]
+    NORMALIZE --> EVENT[Создание Event'ов<br/>src/core/events.py]
     
-    EVENT --> STORE_EVENTS[(Хранение в SQLite<br/>logcopilot/storage/db.py)]
+    EVENT --> STORE_EVENTS[(Хранение в SQLite<br/>src/storage/]
     
     STORE_EVENTS --> PROFILE{Выбор профиля анализа}
     
@@ -53,7 +53,7 @@ flowchart TD
     
     ARTIFACTS --> SQLITE[(SQLite + out/runs/<run_id>/)]
     
-    SQLITE --> AGENT[🤖 LLM Agent<br/>logcopilot/agent/]
+    SQLITE --> AGENT[🤖 LLM Agent<br/>src/agent/]
     
     AGENT --> OUTPUT[📄 Результат:<br/>run_summary.json + top_incidents.md]
 ```
@@ -72,7 +72,7 @@ python -m pip install -e .
 ### 1. Обычный запуск (без LLM)
 
 ```bash
-python -m logcopilot.cli run --input data/sample.log --profile traffic --out out
+python -m src.cli run --input data/sample.log --profile traffic --out out
 ```
 ### 2. Запуск с Yandex LLM
 
@@ -83,13 +83,13 @@ python -m logcopilot.cli run --input data/sample.log --profile traffic --out out
  - Аккаунт Yandex Cloud с доступом к LLM
 
 ```bash
-python -m logcopilot.cli run --input data/sample.log --profile incidents --out out --llm yandex
+python -m src.cli run --input data/sample.log --profile incidents --out out --agent-provider yandex
 ```
 ### 3. Запуск с отключенной семантикой (--semantic off)
 
 Это режим быстрого анализа без группировки ошибок по смыслу. Работает только статистическая кластеризация.
 ```bash
-python -m logcopilot.pipeline --input data/sample.log --out out --semantic off
+python -m src.cli run --input data/sample.log --profile incidents --out out --semantic off
 ```
 
 ### Запустить тесты:
@@ -97,6 +97,52 @@ python -m logcopilot.pipeline --input data/sample.log --out out --semantic off
 ```bash
 python -m unittest discover -s tests
 ```
+
+## Запуск через Docker
+
+Docker-образ собирает CLI `logcopilot` в изолированном Python 3.11 окружении. Входные логи удобно монтировать в `/app/data`, результаты - в `/app/out`, а кэш моделей sentence-transformers - в `/app/.cache`.
+
+Собрать образ:
+
+```bash
+docker build -t logcopilot:latest .
+```
+
+Запустить анализ одного файла без семантической модели:
+
+```bash
+docker run --rm \
+  -v "$PWD/data:/app/data:ro" \
+  -v "$PWD/out:/app/out" \
+  logcopilot:latest \
+  run --input /app/data/nginx_logs.log --profile traffic --out /app/out --semantic off
+```
+
+Запустить batch-анализ всех `.log` файлов из `data`:
+
+```bash
+docker run --rm \
+  -v "$PWD/data:/app/data:ro" \
+  -v "$PWD/out:/app/out" \
+  logcopilot:latest \
+  batch --input /app/data --profile auto --out /app/out --semantic off
+```
+
+То же через Docker Compose:
+
+```bash
+docker compose build
+docker compose run --rm logcopilot batch --input /app/data --profile auto --out /app/out --semantic off
+```
+
+На Linux-сервере можно передать UID/GID пользователя, чтобы файлы в `out` создавались с удобным владельцем:
+
+```bash
+LOGCOPILOT_UID="$(id -u)" LOGCOPILOT_GID="$(id -g)" \
+  docker compose run --rm logcopilot batch --input /app/data --profile auto --out /app/out --semantic off
+```
+
+Для запуска с Yandex LLM передайте переменные окружения `YC_FOLDER_ID`, `YC_AI_API_KEY`, `YC_MODEL` и используйте `--agent-provider yandex`.
 
 
 
@@ -262,7 +308,7 @@ flowchart LR
 ## Структура репозитория
 
 ```text
-logcopilot/
+src/
   core/       общее ядро и сборка Event
   profiles/   heatmap / incidents / traffic
   storage/    SQLite и read API

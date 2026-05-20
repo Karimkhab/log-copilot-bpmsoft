@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 import unittest
 
-from logcopilot.cli import main as cli_main
+from src.cli import main as cli_main
 
 
 class CliTests(unittest.TestCase):
@@ -29,7 +29,7 @@ class CliTests(unittest.TestCase):
             stdout = io.StringIO()
             try:
                 sys.argv = [
-                    "logcopilot.cli",
+                    "src.cli",
                     "run",
                     "--input",
                     str(log_file),
@@ -69,7 +69,7 @@ class CliTests(unittest.TestCase):
             stdout = io.StringIO()
             try:
                 sys.argv = [
-                    "logcopilot.cli",
+                    "src.cli",
                     "batch",
                     "--input",
                     str(logs_dir),

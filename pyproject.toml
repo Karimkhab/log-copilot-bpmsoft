@@ -26,8 +26,11 @@ full = [
   "langchain-openai>=0.2",
 ]
 
+[project.scripts]
+logcopilot = "src.cli:main"
+
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["logcopilot*"]
+include = ["src*", "logcopilot"]

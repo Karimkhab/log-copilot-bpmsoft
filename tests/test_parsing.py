@@ -2,8 +2,8 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from logcopilot.parsing import build_default_registry, iter_events_for_file, parse_file
-from logcopilot.parsing.parsers import (
+from src.parsing import build_default_registry, iter_events_for_file, parse_file
+from src.parsing.parsers import (
     BPMSoftRequestParser,
     GenericFallbackParser,
     JsonParser,
@@ -13,9 +13,9 @@ from logcopilot.parsing.parsers import (
     WebAccessParser,
     WindowsServicingParser,
 )
-from logcopilot.core.events import build_event
-from logcopilot.analysis.quality import assess_profile_fit
-from logcopilot.parsing.pipeline import canonical_to_raw_event
+from src.core.events import build_event
+from src.analysis.quality import assess_profile_fit
+from src.parsing.pipeline import canonical_to_raw_event
 
 
 class ParserSubsystemTests(unittest.TestCase):
@@ -106,6 +106,16 @@ class ParserSubsystemTests(unittest.TestCase):
         self.assertEqual(245.0, event.latency_ms)
         self.assertEqual("127.0.0.1", event.client_ip)
         self.assertEqual("curl/8.0", event.user_agent)
+
+    def test_web_access_parser_accepts_decimal_response_size(self) -> None:
+        parser = WebAccessParser()
+        content = '127.0.0.1 - - [11/Mar/2026:08:21:15 +0000] "GET /api/orders HTTP/1.1" 200 11180.0 "-" "curl/8.0"\n'
+
+        result = parser.parse(content, source="access.log")
+
+        self.assertEqual(1, len(result.events))
+        self.assertEqual(11180, result.events[0].response_size)
+        self.assertFalse(result.warnings)
 
     def test_bpmsoft_request_parser_extracts_method_path_status_and_ip(self) -> None:
         parser = BPMSoftRequestParser()
