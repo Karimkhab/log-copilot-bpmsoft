@@ -286,6 +286,8 @@ def _hotspot(row: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Компактное описание горячего бакета тепловой карты с временем, компонентом, операцией, ошибками и задержкой.
     """
+    bucket_start = _clip(row.get("bucket_start", ""), 80)
+    operation = _clip(row.get("operation", "unknown"), 260)
     return {
         "card_key": f"{bucket_start}|{operation}",
         "bucket_start": bucket_start,
@@ -347,6 +349,9 @@ def _traffic_row(row: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Компактное описание строки трафика с методом, путем, статусом, частотой, ошибками и p95 задержки.
     """
+    method = _clip(row.get("method", "UNKNOWN"), 32)
+    path = _clip(row.get("path", "unknown"), 260)
+    status = row.get("http_status")
     return {
         "card_key": f"{method}|{path}|{status}",
         "method": method,

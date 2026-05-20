@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from logcopilot.pipeline import run_pipeline
+from src.pipeline import run_pipeline
 
 
 class HeatmapIntegrationTests(unittest.TestCase):

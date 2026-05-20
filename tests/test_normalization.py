@@ -1,6 +1,6 @@
 import unittest
 
-from logcopilot.text import normalize_text
+from src.text import normalize_text
 
 
 class NormalizationTests(unittest.TestCase):

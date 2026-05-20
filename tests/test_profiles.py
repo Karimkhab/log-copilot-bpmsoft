@@ -3,8 +3,8 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from logcopilot.profiles import run_heatmap_profile, run_incidents_profile, run_traffic_profile
-from logcopilot.pipeline import run_pipeline
+from src.profiles import run_heatmap_profile, run_incidents_profile, run_traffic_profile
+from src.pipeline import run_pipeline
 
 
 class ProfileComputeOnlyTests(unittest.TestCase):

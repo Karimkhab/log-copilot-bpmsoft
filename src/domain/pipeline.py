@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from .models import Event, ExecutionQuality, FindingCard, RunSummary
 
 if TYPE_CHECKING:
-    from logcopilot.parsing.models import CanonicalEvent
-    from logcopilot.storage import StorageRepository
-    from logcopilot.text import NormalizationStats
+    from src.parsing.models import CanonicalEvent
+    from src.storage import StorageRepository
+    from src.text import NormalizationStats
 
 
 @dataclass(frozen=True)

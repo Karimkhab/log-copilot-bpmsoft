@@ -60,6 +60,19 @@ def parse_latency_ms(tail: str) -> float | None:
     return None
 
 
+def parse_response_size(value: str) -> int | None:
+    """Разбирает размер ответа access-лога, включая значения вида `11180.0` из выгрузок."""
+    if value == "-":
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        try:
+            return int(float(value))
+        except ValueError:
+            return None
+
+
 class WebAccessParser(BaseParser):
     """Парсер строк в стиле common или combined access-log."""
 
@@ -105,7 +118,10 @@ class WebAccessParser(BaseParser):
                 continue
             tail = match.group("tail") or ""
             message = f"{match.group('method')} {match.group('path')}"
-            response_size = None if match.group("size") == "-" else int(match.group("size"))
+            size_value = match.group("size")
+            response_size = parse_response_size(size_value)
+            if response_size is None and size_value != "-":
+                warnings.append(f"Line {index} has invalid response size: {size_value!r}")
             latency_ms = parse_latency_ms(tail)
             events.append(
                 CanonicalEvent(

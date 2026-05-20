@@ -1,34 +1,21 @@
 from __future__ import annotations
 
-"""Публичный API пакета LogCopilot."""
+"""Compatibility package for the historical `logcopilot` import path.
 
-__all__ = ["__version__", "PipelineConfig", "RunResult", "run_batch_pipeline", "run_pipeline"]
+The implementation package was moved to `src`, but external scripts may still
+import `logcopilot.*`. Reusing `src.__path__` keeps those imports working
+without duplicating source files.
+"""
 
-__version__ = "0.1.0"
+from importlib import import_module
+from typing import Any
+
+_src = import_module("src")
+
+__path__ = _src.__path__
+__all__ = getattr(_src, "__all__", [])
+__version__ = getattr(_src, "__version__", "0.1.0")
 
 
-def __getattr__(name: str):
-    """Лениво возвращает публичный атрибут модуля, сохраняя совместимость импортов.
-    
-    Args:
-        name (str): Имя переменной, поля, провайдера или ресурса, значение которого обрабатывается.
-    
-    Returns:
-        Any: Публичный объект пакета, загруженный лениво по имени, например функция запуска конвейера или доменная модель.
-    
-    Raises:
-        AttributeError: Возникает, если входные данные или состояние не позволяют выполнить операцию корректно.
-    """
-    if name == "run_pipeline":
-        from .pipeline import run_pipeline
-
-        return run_pipeline
-    if name == "run_batch_pipeline":
-        from .pipeline import run_batch_pipeline
-
-        return run_batch_pipeline
-    if name in {"PipelineConfig", "RunResult"}:
-        from .domain import PipelineConfig, RunResult
-
-        return {"PipelineConfig": PipelineConfig, "RunResult": RunResult}[name]
-    raise AttributeError(f"module 'logcopilot' has no attribute {name!r}")
+def __getattr__(name: str) -> Any:
+    return getattr(_src, name)

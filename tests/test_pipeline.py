@@ -6,8 +6,8 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from logcopilot.domain import PipelineConfig, ProfileStageResult
-from logcopilot.pipeline import main as pipeline_main, run_pipeline
+from src.domain import PipelineConfig, ProfileStageResult
+from src.pipeline import main as pipeline_main, run_pipeline
 
 
 class PipelineContractTests(unittest.TestCase):
@@ -165,7 +165,7 @@ class PipelineTests(unittest.TestCase):
             out_dir = root / "out"
             log_file.write_text(content, encoding="utf-8")
 
-            with patch("logcopilot.pipeline.run_event_building", side_effect=RuntimeError("boom")):
+            with patch("src.pipeline.run_event_building", side_effect=RuntimeError("boom")):
                 with self.assertRaises(RuntimeError):
                     run_pipeline(str(log_file), profile="traffic", out_dir=str(out_dir))
 
@@ -205,7 +205,7 @@ class PipelineTests(unittest.TestCase):
             original_argv = sys.argv
             try:
                 sys.argv = [
-                    "logcopilot.pipeline",
+                    "src.pipeline",
                     "--input",
                     str(log_file),
                     "--out",

@@ -1,0 +1,19 @@
+services:
+  logcopilot:
+    build:
+      context: .
+    image: logcopilot:latest
+    environment:
+      YC_FOLDER_ID: ${YC_FOLDER_ID:-}
+      YC_AI_API_KEY: ${YC_AI_API_KEY:-}
+      YC_MODEL: ${YC_MODEL:-yandexgpt}
+      YC_TIMEOUT: ${YC_TIMEOUT:-15}
+      LOGCOPILOT_UID: ${LOGCOPILOT_UID:-10001}
+      LOGCOPILOT_GID: ${LOGCOPILOT_GID:-10001}
+    volumes:
+      - ./data:/app/data:ro
+      - ./out:/app/out
+      - logcopilot-cache:/app/.cache
+
+volumes:
+  logcopilot-cache:

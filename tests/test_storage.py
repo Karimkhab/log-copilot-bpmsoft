@@ -2,8 +2,8 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from logcopilot.pipeline import run_pipeline
-from logcopilot.storage import StorageRepository
+from src.pipeline import run_pipeline
+from src.storage import StorageRepository
 
 
 class StorageTests(unittest.TestCase):
